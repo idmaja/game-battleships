@@ -1,11 +1,5 @@
-public class Coordinate
+public struct Coordinate(int row, int col)
 {
-    int Row { get; }
-    int Col { get; }
-
-    public Coordinate(int row, int col)
-    {
-        Row = row;
-        Col = col;
-    }
+    public int Row { get; } = row;
+    public int Col { get; } = col;
 }
