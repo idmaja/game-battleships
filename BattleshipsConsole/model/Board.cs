@@ -1,10 +1,3 @@
-public interface IBoard
-{
-    int Height { get; set; }
-    int Width { get; set; }
-    ICell[,] Cells { get; }
-}
-
 public class Board : IBoard
 {
     public int Height { get; set; }
@@ -18,8 +11,11 @@ public class Board : IBoard
 
         if (cells != null)
         {
+            Cells = cells;
+        }
+        else
+        {
             Cells = new Cell[Height, Width];
-
             for (int row = 0; row < Height; row++)
             {
                 for (int column = 0; column < Width; column++)
@@ -28,6 +24,5 @@ public class Board : IBoard
                 }
             }
         }
-        Cells = cells!;
     }
 }
