@@ -373,6 +373,5 @@ public class GameController
     public IBoard GetBoardInfo(IPlayer player) => _playerBoards[player];
     public IReadOnlyList<IPlayer> GetPlayersInfo() => _players;
     public IReadOnlyDictionary<IPlayer, IBoard> GetPlayerBoards() => _playerBoards;
-    public IReadOnlyDictionary<IPlayer, List<IShip>> GetPlayerShips() => _playerShips;
     public IReadOnlyList<IShip> GetPlayerShips(IPlayer player) => _playerShips[player];
 }
