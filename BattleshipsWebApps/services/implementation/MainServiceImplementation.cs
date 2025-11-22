@@ -1,3 +1,6 @@
+using System.Text;
+using Serilog;
+
 public class MainService : IMainService
 {
     private List<IPlayer> _players;
@@ -6,17 +9,68 @@ public class MainService : IMainService
     private Dictionary<IPlayer, List<IShip>> _playerShips;
     private int _currentPlayerIndex;
 
-    public event Action<IPlayer, IPlayer, Dictionary<IPlayer, int>>? OnMessageResult;
+    private readonly Serilog.ILogger _logger;
+    private readonly IMessageService _messageService;
 
-    public MainService(IPlayer player1, IPlayer player2, IBoard board1, IBoard board2, List<IShip> ship1, List<IShip> ship2)
+    // public event Action<IPlayer, IPlayer, Dictionary<IPlayer, int>>? OnMessageResult;
+    public event Action<string>? OnMessageReceived;
+    
+    public MainService(IMessageService messageService)
     {
+        _messageService = messageService;
+        _players = new List<IPlayer>() ;
+        _playerBoards = new Dictionary<IPlayer, IBoard>();
+        _playerShips = new Dictionary<IPlayer, List<IShip>>();
+        _playerScores = new Dictionary<IPlayer, int>();
+
+        _currentPlayerIndex = 0;
+        _logger = new LoggerConfiguration()
+                    .MinimumLevel.Debug()
+                    .WriteTo.Console()
+                    .WriteTo.File("logs/mainservice.log", rollingInterval: RollingInterval.Day)
+                    .CreateLogger();
+    }
+
+    public void InitializeGame(CreateGameRequest request)
+    {
+        var player1 = new Player(request.Player1Name);
+        var player2 = new Player(request.Player2Name);
+
+        var boardPlayer1 = new Board(request.BoardWidth, request.BoardHeight);
+        var boardPlayer2 = new Board(request.BoardWidth, request.BoardHeight);
+
+        var ships1 = request.ShipLengthsPlayer1
+            .Select(length => (IShip)new Ship(length, 0, false, new List<Coordinate>()))
+            .ToList();
+
+        var ships2 = request.ShipLengthsPlayer2
+            .Select(length => (IShip)new Ship(length, 0, false, new List<Coordinate>()))
+            .ToList();
+
         _players = new List<IPlayer> { player1, player2 };
-        _playerBoards = new Dictionary<IPlayer, IBoard> { {player1, board1}, {player2, board2} };
-        _playerShips = new Dictionary<IPlayer, List<IShip>> { {player1, ship1}, {player2, ship2} };
-        _playerScores = new Dictionary<IPlayer, int> { {player1, 0}, {player2, 0} };
+
+        _playerBoards = new Dictionary<IPlayer, IBoard>
+        {
+            { player1, boardPlayer1 },
+            { player2, boardPlayer2 }
+        };
+
+        _playerShips = new Dictionary<IPlayer, List<IShip>>
+        {
+            { player1, ships1 },
+            { player2, ships2 }
+        };
+        
+        _playerScores = new Dictionary<IPlayer, int>
+        {
+            { player1, 0 },
+            { player2, 0 }
+        };
+        
         _currentPlayerIndex = 0;
     }
-    public bool PlaceShips(IPlayer player, IShip ship, string coorStart, string coorEnd)
+
+    public bool PlaceShips(IPlayer player, IShip ship, string coorStart, string coorEnd, out string message)
     {
         var board = _playerBoards[player];
 
@@ -28,17 +82,16 @@ public class MainService : IMainService
             start.Col < 0 || start.Col >= board.Width ||
             end.Col < 0 || end.Col >= board.Width)
         {
-            Console.WriteLine("Invalid ship placement. Ship is outside the board.");
+            message = $"Invalid ship placement. Ship is outside the board.";
             return false;
         }
         
         bool isHorizontal = start.Row == end.Row;
         bool isVertical = start.Col == end.Col;
 
-
         if (!isHorizontal && !isVertical)
         {
-            Console.WriteLine("Invalid ship placement. Ships must be placed horizontally or vertically.");
+            message = $"Invalid ship placement. Ships must be placed horizontally or vertically.";
             return false;
         }
 
@@ -51,28 +104,35 @@ public class MainService : IMainService
 
         if (distance != ship.Length)
         {
-            Console.WriteLine($"Ship length must be {ship.Length}");
+            message = $"Ship length must be {ship.Length}";
             return false;
         }
 
-        List<Coordinate> coordinates = CheckShipPath(start, end);
-
-        foreach (var coordinate in coordinates)
+        try
         {
-            if (board.Cells[coordinate.Row, coordinate.Col].Ship != null)
+            List<Coordinate> coordinates = CheckShipPath(start, end);
+
+            foreach (var coordinate in coordinates)
             {
-                Console.WriteLine("Invalid ship placement. Ships cannot overlap or extend beyond the board.");
-                return false;
+                if (board.Cells[coordinate.Row, coordinate.Col].Ship != null)
+                {
+                    message = $"Invalid ship placement. Ships cannot overlap or extend beyond the board.";
+                    return false;
+                }
             }
+
+            foreach (var coordinate in coordinates)
+                board.Cells[coordinate.Row, coordinate.Col].Ship = (Ship?)ship;
+
+            ship.Positions = coordinates;
+            message = $"Ship placed successfully for player {player.Name} at coordinates: {coorStart} to {coorEnd}";
+            return true;
         }
-
-        foreach (var coordinate in coordinates)
-            board.Cells[coordinate.Row, coordinate.Col].Ship = (Ship?)ship;
-
-        ship.Positions = coordinates;
-
-        Console.WriteLine($"Ship placed successfully!, {coordinates}, ship: {ship.Positions}, Length: {ship.Length}");
-        return true;
+        catch (Exception)
+        {
+            message = $"Error placing ship for player {player.Name}";
+            return false;
+        }
     }
 
     public List<Coordinate> CheckShipPath(Coordinate coorStart, Coordinate coorEnd)
@@ -122,37 +182,63 @@ public class MainService : IMainService
         }
     }
 
-    public bool Attack(Coordinate coordinate)
+    public async Task<bool> Attack(Coordinate coordinate)
     {
         IPlayer attacker = GetCurrentPlayer();
         IPlayer defender = NextPlayer();
 
-        bool isShipHit = ReceivedAttack(defender, coordinate);
+        bool isShipHit = ReceivedAttack(defender, coordinate, out string message);
+
+        var outputMessage = new StringBuilder();
+        outputMessage.AppendLine($"Winner: {attacker.Name}");
+        outputMessage.AppendLine($"Looser: {defender.Name}");
+        outputMessage.AppendLine("Score:");
+
+        foreach (var item in GetAllPlayerScore())
+            outputMessage.AppendLine($"- {item.Key.Name}: {item.Value}");
 
         if (isShipHit)
         {
             IncreasePlayerScore(attacker);
+
             if (IsAllShipsSunk(defender)) 
-                ResultMessage(attacker, defender, GetAllPlayerScore());
+                await MessageNotification(outputMessage.ToString());
+            
+            await MessageNotification(message);
         }
-        else 
+        else
+        {
+            await MessageNotification($"Attack by {attacker.Name} at {(char)(coordinate.Col + 'A')}{coordinate.Row + 1} missed!");
             NextPlayer();
+        }
         
         return isShipHit;
     }
 
-    public bool ReceivedAttack(IPlayer defender, Coordinate coordinate)
+    public bool ReceivedAttack(IPlayer defender, Coordinate coordinate, out string message)
     {
         var boardDefender = _playerBoards[defender];
         var cell = boardDefender.Cells[coordinate.Row, coordinate.Col];
 
-        if (cell.Ship == null) 
+        if (cell.IsHit) 
+        {
+            message = "Cell has already been attacked.";
             return false;
+        }
+            
+        if (cell.Ship == null) 
+        {
+            message = "No ship present at the attacked coordinate.";
+            return false;
+        }
 
         IncreaseShipHit(cell);
         
         if (cell.Ship.Hits >= cell.Ship.Length) 
             cell.Ship.IsSunk = true;
+
+        message = "Ship hit successfully.";
+        cell.IsHit = true;
 
         return true;
     }
@@ -167,9 +253,21 @@ public class MainService : IMainService
     public void IncreasePlayerScore(IPlayer player) => _playerScores[player]++;
     public void IncreaseShipHit(ICell cell) => cell.Ship!.Hits++;
 
-    public virtual void ResultMessage(IPlayer attacker, IPlayer defender, Dictionary<IPlayer, int> playerScore) 
-        => OnMessageResult?.Invoke(attacker, defender, _playerScores);
+    // public virtual void MessageNotification(IPlayer attacker, IPlayer defender, Dictionary<IPlayer, int> playerScore) 
+        // => OnMessageResult?.Invoke(attacker, defender, _playerScores);
+    public virtual async Task MessageNotification(string message)
+    {
+        OnMessageReceived?.Invoke(message); // synchronous event invocation
+        await _messageService.SendMessageAsync(message); // asynchronous message sending
+    }
 
+    public bool IsGameInitialized()
+    {
+        return _players.Count > 0 
+            && _playerBoards.Count > 0 
+            && _playerShips.Count > 0 
+            && _playerScores.Count > 0;
+    }
     public IPlayer GetCurrentPlayer() => _players[_currentPlayerIndex];
     public IPlayer NextPlayer() => _players[(_currentPlayerIndex + 1) % _players.Count];
     public int GetPlayerScore(IPlayer player) => _playerScores[player];
@@ -178,4 +276,5 @@ public class MainService : IMainService
     public IReadOnlyList<IPlayer> GetPlayersInfo() => _players;
     public IReadOnlyDictionary<IPlayer, IBoard> GetPlayerBoards() => _playerBoards;
     public IReadOnlyList<IShip> GetPlayerShips(IPlayer player) => _playerShips[player];
+    public Serilog.ILogger GetLogger() => _logger;
 }
