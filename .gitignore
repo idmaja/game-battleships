@@ -82,3 +82,9 @@ artifacts/
 # Windows
 Thumbs.db
 Desktop.ini
+
+# Frontend
+node_modules/
+dist/
+build/
+.env
