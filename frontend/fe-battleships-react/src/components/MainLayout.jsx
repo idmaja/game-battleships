@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { initializeGame, placeShip, attack, getBoard, removeShip } from '../services/api';
-import { DndContext, useDraggable } from '@dnd-kit/core';
-import { BoardCell } from './Board';
-import ship3 from '../assets/ship-3.svg';
-import ship4 from '../assets/ship-4.svg';
-import ship5 from '../assets/ship-5.svg';
+import { DndContext } from '@dnd-kit/core';
+import { GameSetup } from './GameSetup';
+import { ShipPlacement } from './ShipPlacement';
+import { GameBoard } from './GameBoard';
+import { Modal } from './Modal';
 import * as signalR from '@microsoft/signalr';
 
 export const MainLayout = () => {
@@ -13,7 +13,7 @@ export const MainLayout = () => {
     const [computerName, setComputerName] = useState('');
     const [boardWidth, setBoardWidth] = useState(10);
     const [boardHeight, setBoardHeight] = useState(10);
-    const [shipLengths, setShipLengths] = useState('5,4,3');
+    const [shipLengths, setShipLengths] = useState('5, 4, 3');
     const [playerBoard, setPlayerBoard] = useState([]);
     const [computerBoard, setComputerBoard] = useState([]);
     const [shipsToPlace, setShipsToPlace] = useState([]);
@@ -24,12 +24,9 @@ export const MainLayout = () => {
     const [message, setMessage] = useState('');
     const [scores, setScores] = useState({});
     const [connection, setConnection] = useState(null);
-
-    const shipSprites = {
-        3: ship3,
-        4: ship4,
-        5: ship5,
-    };
+    const [dragOverCell, setDragOverCell] = useState(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalContent, setModalContent] = useState({ title: '', message: '' });
 
     useEffect(() => {
         const newConnection = new signalR.HubConnectionBuilder()
@@ -59,18 +56,45 @@ export const MainLayout = () => {
     const handleInitGame = async (e) => {
         e.preventDefault();
         const ships = shipLengths.split(',').map(s => parseInt(s.trim()));
+        const width = parseInt(boardWidth);
+        const height = parseInt(boardHeight);
+        
+        // validasi panjang ships
+        const maxShipLength = Math.max(...ships);
+        const minDimension = Math.min(width, height);
+        
+        if (maxShipLength > minDimension) {
+            setModalContent({
+                title: 'Invalid Ship Length',
+                message: `Ship length (${maxShipLength}) exceeds board dimensions! Maximum allowed: ${minDimension}`
+            });
+            setModalOpen(true);
+            return;
+        }
+        
+        const totalShipCells = ships.reduce((sum, len) => sum + len, 0);
+        const totalBoardCells = width * height;
+        
+        if (totalShipCells > totalBoardCells * 0.5) {
+            setModalContent({
+                title: 'Too Many Ships',
+                message: `Total ship cells (${totalShipCells}) is too large for board size (${totalBoardCells} cells). Reduce ship lengths or increase board size.`
+            });
+            setModalOpen(true);
+            return;
+        }
+        
         try {
             await initializeGame({
                 playerName,
                 computerName,
-                boardWidth: parseInt(boardWidth),
-                boardHeight: parseInt(boardHeight),
+                boardWidth: width,
+                boardHeight: height,
                 shipLengthsPlayer: ships,
                 shipLengthsComputer: ships
             });
             setShipsToPlace(ships);
             setAllShips(ships);
-            // setMessage('Drag ships to board');
             setGameState('setup');
             await loadBoards();
         } catch (error) {
@@ -86,13 +110,12 @@ export const MainLayout = () => {
         const shipIndex = parseInt(active.id.split('-')[2]);
         const start = `${String.fromCharCode(65 + col)}${row + 1}`;
         
-        let endRow = row;
-        let endCol = col;
-        if (shipOrientation === 'horizontal') {
+        let endRow = row; let endCol = col;
+        if (shipOrientation === 'horizontal') 
             endCol = col + draggedShip - 1;
-        } else {
+        else 
             endRow = row + draggedShip - 1;
-        }
+       
         const end = `${String.fromCharCode(65 + endCol)}${endRow + 1}`;
 
         try {
@@ -117,14 +140,13 @@ export const MainLayout = () => {
 
     const handleRemoveShip = async ( shipLength ) => {
         try {
-            await removeShip({
-                playerName,
-                shipLength: shipLength,
-            });
+            await removeShip({ playerName, shipLength: shipLength });
             
             const newPlaced = placedShips.filter(s => s.length !== shipLength);
+
             setPlacedShips(newPlaced);
             setShipsToPlace([...shipsToPlace, shipLength]);
+
             await loadBoards();
         } catch (error) {
             setMessage('Error removing ship');
@@ -132,9 +154,7 @@ export const MainLayout = () => {
     };
 
     const handleReady = () => {
-        if (placedShips.length === allShips.length) {
-            setGameState('playing');
-        }
+        if (placedShips.length === allShips.length) setGameState('playing');
     };
 
     const handleCellClick = async (row, col, isPlayer) => {
@@ -142,13 +162,10 @@ export const MainLayout = () => {
             const coord = `${String.fromCharCode(65 + col)}${row + 1}`;
             try {
                 const response = await attack({ coordinate: coord });
-                const data = response.data;
                 
-                setScores(data.scores || {});
+                setScores(response.data.scores || {});
                 
-                if (data.isGameOver) {
-                    setGameState('gameover');
-                }
+                if (response.data.isGameOver) setGameState('gameover');
                 
                 loadBoards();
             } catch (error) {
@@ -160,8 +177,9 @@ export const MainLayout = () => {
     const loadBoards = async () => {
         if (!playerName || !computerName) return;
         try {
-            const playerRes = await getBoard(playerName);
-            const computerRes = await getBoard(computerName);
+            const playerRes = await getBoard({ playerName: playerName });
+            const computerRes = await getBoard({ playerName: computerName });
+
             setPlayerBoard(playerRes.data.cells || []);
             setComputerBoard(computerRes.data.cells || []);
         } catch (error) {
@@ -169,163 +187,108 @@ export const MainLayout = () => {
         }
     };
 
-    const DraggableShip = ({ length, index, shipOrientation, setShipOrientation }) => {
-        const { attributes, listeners, setNodeRef, transform, isDragging } =
-            useDraggable({ id: `ship-${length}-${index}` });
-
-        // style dari dnd-kit
-        const baseStyle = transform
-            ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-            : {};
-
-        // gabungkan translate + rotate
-        const combinedStyle = {
-            ...baseStyle,
-            transform: `${baseStyle.transform || ''} ${
-            shipOrientation === 'vertical' ? 'rotate(90deg)' : ''
-            }`.trim(),
-        };
-
-        const handleContextMenu = (e) => {
-            e.preventDefault();
-            if (isDragging) {
-                setShipOrientation(
-                    shipOrientation === 'horizontal' ? 'vertical' : 'horizontal'
-                );
-            }
-        };
-
-        const sprite = shipSprites[length];
-
-        return (
-            <div
-                ref={setNodeRef}
-                style={combinedStyle}
-                {...listeners}
-                {...attributes}
-                onContextMenu={handleContextMenu}
-                className="cursor-move inline-block select-none ship-rotatable"
-                >
-                <img
-                    src={sprite}
-                    alt={`ship-${length}`}
-                    className="pointer-events-none"
-                />
-            </div>
-        );
+    const handleDragOver = (event) => {
+        if (event.over && draggedShip) {
+            const [row, col] = event.over.id.split('-').map(Number);
+            setDragOverCell({ row, col });
+        } else 
+            setDragOverCell(null);
     };
 
-    const renderBoard = (cells, isPlayer, name, score) => {
-        const height = parseInt(boardHeight);
-        const width = parseInt(boardWidth);
-        const grid = Array.from({ length: height }, () => Array(width).fill(null));
-        
-        cells.forEach(cell => {
-            grid[cell.row][cell.col] = cell;
-        });
+    const previewCells = useMemo(() => {
+        if (!dragOverCell || !draggedShip) return [];
+        const cells = [];
+        for (let i = 0; i < draggedShip; i++) {
+            if (shipOrientation === 'horizontal')
+                cells.push({ row: dragOverCell.row, col: dragOverCell.col + i }) 
+            else
+                cells.push({ row: dragOverCell.row + i, col: dragOverCell.col });
+        }
+        return cells;
+    }, [dragOverCell, draggedShip, shipOrientation]);
 
-        return (
-            <div className="flex-1 bg-white p-6 rounded shadow">
-                <h2 className="text-2xl font-bold mb-2">{name}</h2>
-                <p className="text-lg mb-4">Score: {score || 0}</p>
-                <div className="grid gap-1" style={{gridTemplateColumns: `repeat(${width}, minmax(0, 1fr))`, maxWidth: `${width * 36}px`}}>
-                {grid.map((row, rowIdx) => 
-                    row.map((cell, colIdx) => (
-                    <BoardCell key={`${rowIdx}-${colIdx}`} row={rowIdx} col={colIdx} cell={cell} isPlayer={isPlayer} gameState={gameState} handleCellClick={handleCellClick} />
-                    ))
-                )}
-                </div>
-            </div>
-        );
-    };
+
 
     if (gameState === 'init') {
         return (
-            <div className="min-h-screen bg-gray-100 flex items-center justify-center p-8">
-                <div className="bg-white p-8 rounded shadow max-w-md w-full">
-                    <h1 className="text-3xl font-bold text-center mb-6">Initialize Game</h1>
-                    <form onSubmit={handleInitGame} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Player Name</label>
-                            <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} required className="w-full border border-gray-300 rounded px-3 py-2" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Computer Name</label>
-                            <input type="text" value={computerName} onChange={(e) => setComputerName(e.target.value)} required className="w-full border border-gray-300 rounded px-3 py-2" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Board Width</label>
-                            <input type="number" value={boardWidth} onChange={(e) => setBoardWidth(e.target.value)} required min="5" max="20" className="w-full border border-gray-300 rounded px-3 py-2" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Board Height</label>
-                            <input type="number" value={boardHeight} onChange={(e) => setBoardHeight(e.target.value)} required min="5" max="20" className="w-full border border-gray-300 rounded px-3 py-2" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Ship Lengths (comma separated)</label>
-                            <input type="text" value={shipLengths} onChange={(e) => setShipLengths(e.target.value)} required className="w-full border border-gray-300 rounded px-3 py-2" />
-                        </div>
-                        <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">Start Game</button>
-                    </form>
-                </div>
-            </div>
+            <>
+                <GameSetup 
+                    playerName={playerName}
+                    setPlayerName={setPlayerName}
+                    computerName={computerName}
+                    setComputerName={setComputerName}
+                    boardWidth={boardWidth}
+                    setBoardWidth={setBoardWidth}
+                    boardHeight={boardHeight}
+                    setBoardHeight={setBoardHeight}
+                    shipLengths={shipLengths}
+                    setShipLengths={setShipLengths}
+                    handleInitGame={handleInitGame}
+                />
+                <Modal 
+                    isOpen={modalOpen}
+                    onClose={() => setModalOpen(false)}
+                    title={modalContent.title}
+                    message={modalContent.message}
+                />
+            </>
         );
     }
 
     return (
-        <DndContext onDragStart={(e) => setDraggedShip(parseInt(e.active.id.split('-')[1]))} onDragEnd={handleDragEnd}>
-            <div className="min-h-screen bg-gray-100 p-8">
-                <div className="max-w-7xl mx-auto">
-                <h1 className="text-3xl font-bold text-center mb-4">Battleships</h1>
+        <DndContext 
+            onDragStart={(e) => setDraggedShip(parseInt(e.active.id.split('-')[1]))} 
+            onDragOver={handleDragOver}
+            onDragEnd={(e) => { handleDragEnd(e); setDragOverCell(null); }}
+        >
+            <div className="min-h-screen p-8 bg-gray-100">
+                <div className="mx-auto max-w-7xl">
+                <h1 className="mb-4 text-3xl font-bold text-center">Battleships</h1>
                 
-                <div className="bg-white p-4 rounded shadow mb-4">
-                    <p className="text-center font-semibold">{message}</p>
+                <div className="p-4 mb-4 bg-white rounded shadow">
+                    <p className="font-semibold text-center">{message}</p>
                 </div>
 
                 {gameState === 'setup' && (
-                    <div className="bg-white p-4 rounded shadow mb-4">
-                        <div className="flex justify-center gap-4 mb-4 flex-wrap">
-                            {shipsToPlace.map((ship, idx) => <DraggableShip key={`${ship}-${idx}`} length={ship} index={idx} />)}
-                        </div>
-                        <div className="text-center space-x-4">
-                            <button onClick={() => setShipOrientation(shipOrientation === 'horizontal' ? 'vertical' : 'horizontal')} className="bg-blue-500 text-white px-4 py-2 rounded">
-                                Orientation: {shipOrientation}
-                            </button>
-                            <button 
-                                onClick={handleReady} 
-                                disabled={placedShips.length !== allShips.length}
-                                className="bg-green-500 text-white px-4 py-2 rounded disabled:bg-gray-400 disabled:cursor-not-allowed"
-                            >
-                                Ready ({placedShips.length}/{allShips.length})
-                            </button>
-                        </div>
-                        {placedShips.length > 0 && (
-                            <div className="mt-4">
-                                <p className="text-center text-sm mb-2">Placed Ships (click to remove):</p>
-                                <div className="flex justify-center gap-2 flex-wrap">
-                                    {placedShips.map((ship, idx) => (
-                                        <button 
-                                            key={idx} 
-                                            onClick={() => handleRemoveShip(ship.length)}
-                                            className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"
-                                        >
-                                            Ship ({ship.length})
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    <ShipPlacement 
+                        shipsToPlace={shipsToPlace}
+                        shipOrientation={shipOrientation}
+                        setShipOrientation={setShipOrientation}
+                        placedShips={placedShips}
+                        allShips={allShips}
+                        handleReady={handleReady}
+                        handleRemoveShip={handleRemoveShip}
+                    />
                 )}
 
                 <div className="flex gap-4">
-                    {renderBoard(computerBoard, false, computerName, scores[computerName])}
-                    {renderBoard(playerBoard, true, playerName, scores[playerName])}
+                    <GameBoard 
+                        cells={computerBoard}
+                        isPlayer={false}
+                        name={computerName}
+                        score={scores[computerName]}
+                        boardWidth={boardWidth}
+                        boardHeight={boardHeight}
+                        gameState={gameState}
+                        handleCellClick={handleCellClick}
+                        previewCells={[]}
+                    />
+                    <GameBoard 
+                        cells={playerBoard}
+                        isPlayer={true}
+                        name={playerName}
+                        score={scores[playerName]}
+                        boardWidth={boardWidth}
+                        boardHeight={boardHeight}
+                        gameState={gameState}
+                        handleCellClick={handleCellClick}
+                        previewCells={previewCells}
+                    />
                 </div>
 
                 {gameState === 'gameover' && (
-                    <div className="text-center mt-4">
-                    <button onClick={() => window.location.reload()} className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">New Game</button>
+                    <div className="mt-4 text-center">
+                    <button onClick={() => window.location.reload()} className="px-6 py-2 text-white bg-blue-500 rounded hover:bg-blue-600">New Game</button>
                     </div>
                 )}
                 </div>

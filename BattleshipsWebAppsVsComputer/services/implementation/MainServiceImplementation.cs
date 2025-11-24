@@ -11,22 +11,18 @@ public class MainService : IMainService
     private readonly Serilog.ILogger _logger;
     private readonly IMessageService _messageService;
 
-    // public event Action<IPlayer, IPlayer, Dictionary<IPlayer, int>>? OnMessageResult;
-    public event Action<string>? OnMessageReceived;
+    public event Action<string>? OnGameResult;
     
     public MainService(IMessageService messageService)
     {
         _messageService = messageService;
+        _logger = Log.ForContext<MainService>();
         _players = new List<IPlayer>() ;
         _playerBoards = new Dictionary<IPlayer, IBoard>();
         _playerShips = new Dictionary<IPlayer, List<IShip>>();
         _playerScores = new Dictionary<IPlayer, int>();
-
-        _logger = new LoggerConfiguration()
-                    .MinimumLevel.Debug()
-                    .WriteTo.Console()
-                    .WriteTo.File("logs/mainservice.log", rollingInterval: RollingInterval.Day)
-                    .CreateLogger();
+        OnGameResult += (message) => 
+            _logger.Information($"\u001b[1m{message}\u001b[0m\n");
     }
 
     public void InitializeGame(CreateGameRequest request)
@@ -67,6 +63,7 @@ public class MainService : IMainService
 
         var board = _playerBoards[_players[1]];
         var rand = new Random();
+
         foreach (var ship in ships2)
         {
             bool placed = false;
@@ -144,7 +141,7 @@ public class MainService : IMainService
 
         try
         {
-            List<Coordinate> coordinates = CheckShipPath(start, end);
+            List<Coordinate> coordinates = PlaceShipInPath(start, end);
 
             foreach (var coordinate in coordinates)
             {
@@ -190,7 +187,7 @@ public class MainService : IMainService
         }
     }
 
-    public List<Coordinate> CheckShipPath(Coordinate coorStart, Coordinate coorEnd)
+    public List<Coordinate> PlaceShipInPath(Coordinate coorStart, Coordinate coorEnd)
     {
         
         List<Coordinate> coordinates = new List<Coordinate>();
@@ -213,10 +210,9 @@ public class MainService : IMainService
         }
         else
         {
-            Console.WriteLine("Ships cannot be placed except Horizontal & Vertical");
+            _logger.Information($"Ship cannot be placed except Horizontal & Vertical");
             return new List<Coordinate>();
         }
-
         return coordinates;
     }        
 
@@ -232,7 +228,7 @@ public class MainService : IMainService
         }
         catch
         {
-            Console.WriteLine("Invalid input. Please enter a valid coordinate (e.g., A1, B4, and so on).");
+            _logger.Error($"Invalid input. Please enter a valid coordinate (e.g., A1, B4, and so on).");
             return new Coordinate(0, 0);
         }
     }
@@ -241,41 +237,41 @@ public class MainService : IMainService
     {
         var human = _players[0];
         var computer = _players[1];
+        var scores = GetAllPlayerScore();
 
         var cellComputer = _playerBoards[computer].Cells[coordinate.Row, coordinate.Col];
 
         bool isShipHit = ReceivedAttack(computer, coordinate, out string message);
 
-        var outputMessage = new StringBuilder();
-        outputMessage.AppendLine($"Winner: {human.Name}");
-        outputMessage.AppendLine($"Looser: {computer.Name}");
-        outputMessage.AppendLine("Score:");
-        foreach (var item in GetAllPlayerScore())
-            outputMessage.AppendLine($"- {item.Key.Name}: {item.Value}");
+        var messageNotification = new StringBuilder();
 
         if (isShipHit)
         {
             IncreasePlayerScore(human);
-            await MessageNotification(
-                $"Attack by {human.Name} at {(char)(coordinate.Col + 'A')}{coordinate.Row + 1} success!");
+
+            // coordinate = {(char)(coordinate.Col + 'A')}{coordinate.Row + 1}
+            messageNotification.Append($"Attack by {human.Name} hit the target! | ");
             
             if (IsAllShipsSunk(computer))
             {
-                await MessageNotification(outputMessage.ToString());
+                GameResult($"Winner: {human.Name} ({scores[human]}) | Looser: {computer.Name} ({scores[computer]})");
+
+                await MessageNotification(
+                    $"Winner: {human.Name} ({scores[human]}) | Looser: {computer.Name} ({scores[computer]})"
+                );
 
                 return new AttackResult
                 {
                     HumanHit = true,
                     ComputerHit = false,
-                    IsGameOver = true,// tidak dipakai lagi
+                    IsGameOver = true,
                 };
             }
         }
         else
         {
             cellComputer.IsHit = true;
-            await MessageNotification(
-                $"Attack by {human.Name} at {(char)(coordinate.Col + 'A')}{coordinate.Row + 1} missed.");
+            messageNotification.Append($"Attack by {human.Name} is off target! | ");
         }
 
         var coordinateComputerShot = GetRandomShotForComputer(human);
@@ -285,12 +281,18 @@ public class MainService : IMainService
         if (computerHit)
         {
             IncreasePlayerScore(computer);
-            await MessageNotification(
-                $"Attack by {computer.Name} at {(char)(coordinateComputerShot.Col + 'A')}{coordinateComputerShot.Row + 1} success!");
+
+            // coordinate = {(char)(coordinateComputerShot.Col + 'A')}{coordinateComputerShot.Row + 1}
+            messageNotification.Append($"Attack by {computer.Name} hit the target!");
+
             if (IsAllShipsSunk(human))
             {
+                GameResult($"Winner: {computer.Name} ({scores[computer]}) | Looser: {human.Name} ({scores[human]})");
 
-                await MessageNotification($"{computer.Name} wins");
+                await MessageNotification(
+                    $"Winner: {computer.Name} ({scores[computer]}) | Looser: {human.Name} ({scores[human]})"
+                );
+
                 return new AttackResult
                 {
                     HumanHit = isShipHit,
@@ -303,9 +305,10 @@ public class MainService : IMainService
         else
         {
             cellHuman.IsHit = true;
-            await MessageNotification(
-                $"Attack by {computer.Name} at {(char)(coordinateComputerShot.Col + 'A')}{coordinateComputerShot.Row + 1} missed!.");
+            messageNotification.Append($"Attack by {computer.Name} is off target!");
         }
+
+        await MessageNotification(messageNotification.ToString());
 
         return new AttackResult
         {
@@ -361,7 +364,7 @@ public class MainService : IMainService
             
         if (cell.Ship == null) 
         {
-            message = "<b>No ship present at the attacked coordinate.</b>";
+            message = "No ship present at the attacked coordinate.</b>";
             return false;
         }
 
@@ -386,12 +389,13 @@ public class MainService : IMainService
     public void IncreasePlayerScore(IPlayer player) => _playerScores[player]++;
     public void IncreaseShipHit(ICell cell) => cell.Ship!.Hits++;
 
-    // public virtual void MessageNotification(IPlayer attacker, IPlayer defender, Dictionary<IPlayer, int> playerScore) 
-        // => OnMessageResult?.Invoke(attacker, defender, _playerScores);
+    public virtual void GameResult(string message) 
+        => OnGameResult?.Invoke(message); // synchronous
+
     public virtual async Task MessageNotification(string message)
     {
-        OnMessageReceived?.Invoke(message); // synchronous event invocation
-        await _messageService.SendMessageAsync(message); // asynchronous message sending
+        // OnMessageReceived?.Invoke(message); // synchronous
+        await _messageService.SendMessageAsync(message); // asynchronous 
     }
 
     public bool IsGameInitialized()
@@ -407,6 +411,4 @@ public class MainService : IMainService
     public IReadOnlyList<IPlayer> GetPlayersInfo() => _players;
     public IReadOnlyDictionary<IPlayer, IBoard> GetPlayerBoards() => _playerBoards;
     public IReadOnlyList<IShip> GetPlayerShips(IPlayer player) => _playerShips[player];
-
-    public Serilog.ILogger GetLogger() => _logger;
 }

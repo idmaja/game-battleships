@@ -1,6 +1,22 @@
 using Microsoft.OpenApi;
+using Serilog;
+using Serilog.Events;
+
+Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Fatal)
+            .MinimumLevel.Override("System", LogEventLevel.Fatal)
+            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Fatal)
+            .MinimumLevel.Override("Microsoft.AspNetCore.SignalR", LogEventLevel.Fatal)
+            .WriteTo.Console(
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
+            )
+            .WriteTo.File("logs/mainservice-.log", rollingInterval: RollingInterval.Day)
+            .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -30,13 +46,6 @@ builder.Services.AddSingleton<IMainService, MainService>();
 builder.Services.AddSingleton<IMessageService, MessageService>();
 
 var app = builder.Build();
-
-var mainService = app.Services.GetRequiredService<IMainService>();
-mainService.OnMessageReceived += (message) =>
-{
-    var cleanMessage = message.Replace("<b>", "").Replace("</b>", "");
-    Console.WriteLine($"[INTERNAL METHOD LOG] \u001b[1m{cleanMessage}\u001b[0m\n");
-};
 
 if (app.Environment.IsDevelopment())
 {

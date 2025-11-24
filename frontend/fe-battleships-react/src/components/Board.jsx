@@ -1,6 +1,6 @@
 import { useDroppable } from "@dnd-kit/core";
 
-export const BoardCell = ({ row, col, cell, isPlayer, gameState, handleCellClick }) => {
+export const BoardCell = ({ row, col, cell, isPlayer, gameState, handleCellClick, isPreview }) => {
     
     const { setNodeRef } = useDroppable({ id: `${row}-${col}` });
 
@@ -11,6 +11,8 @@ export const BoardCell = ({ row, col, cell, isPlayer, gameState, handleCellClick
         if (cell.hasShip && !isPlayer && cell.isHit) bgColor = 'bg-red-500';
         if (cell.isSunk) bgColor = 'bg-red-600';
     }
+
+    if (isPreview) bgColor = 'bg-green-300';
 
     const canClick = gameState === 'playing' && !isPlayer && cell && !cell.isHit;
 

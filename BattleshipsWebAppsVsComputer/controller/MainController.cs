@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 using Swashbuckle.AspNetCore.Annotations;
 
 [ApiController]
@@ -6,15 +7,12 @@ using Swashbuckle.AspNetCore.Annotations;
 public class MainController : ControllerBase
 {
     private readonly IMainService _mainService;
-    private readonly Serilog.ILogger? _logger;
-    private readonly IMessageService _messageService;
-    private string? _message;
+    private readonly Serilog.ILogger _logger;
 
-    public MainController(IMainService mainService, IMessageService messageService)
+    public MainController(IMainService mainService)
     {
         _mainService = mainService;
-        _logger = _mainService.GetLogger();
-        _messageService = messageService;
+        _logger = Log.ForContext<MainController>();
     }
 
     [HttpPost("initialize-game")]
@@ -74,10 +72,9 @@ public class MainController : ControllerBase
         }
         else
         {
-            var players = _mainService
-                .GetPlayersInfo()
-                .Select(player => new { Name = player.Name }) // select Name aja
-                .ToList();
+            var players = _mainService.GetPlayersInfo()
+                        .Select(player => new { Name = player.Name }) // select Name aja
+                        .ToList();
 
             if (players.Count == 0)
             {
@@ -156,7 +153,7 @@ public class MainController : ControllerBase
         }
     }
 
-    [HttpGet("ships/{playerName}")]
+    [HttpGet("ships")]
     [SwaggerOperation(
         Summary = "Get the ships of a player",
         Description = "Retrieves the ships for a specific player",
@@ -165,54 +162,54 @@ public class MainController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(GlobalResponse))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(GlobalResponse))]
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(GlobalResponse))]
-    public IActionResult GetShips(string playerName)
+    public IActionResult GetShips([FromQuery] GetShipsRequest request)
     {
         try
         {
-            var player = _mainService.GetPlayersInfo().FirstOrDefault(p => p.Name.ToLower() == playerName.ToLower());
-            if (player == null)
+            var players = _mainService.GetPlayersInfo().FirstOrDefault(player => player.Name.ToLower() == request.PlayerName.ToLower());
+            if (players== null)
             {
-                _logger?.Error($"Player {playerName} not found.");
+                _logger?.Error($"Player {request.PlayerName} not found.");
                 return NotFound(new GlobalResponse
                 {
                     Success = false,
-                        Message = $"Player {playerName} not found!",
-                        Data = {}
-                });
-            }
-            var ships = _mainService.GetPlayerShips(player);
-            if (ships == null)
-            {
-                _logger?.Error($"{playerName}'s ship(s) are not available or have already been deployed.");
-                return NotFound(new GlobalResponse
-                {
-                    Success = false,
-                    Message = $"{playerName}'s ship(s) are not available or have already been deployed.",
+                    Message = $"Player {request.PlayerName} not found!",
                     Data = {}
                 });
             }
-            
-            _logger?.Information($"Player {playerName}'s ships retrieved successfully");
+            var ships = _mainService.GetPlayerShips(players);
+            if (ships == null)
+            {
+                _logger?.Error($"{request.PlayerName}'s ship(s) are not available or have already been deployed.");
+                return NotFound(new GlobalResponse
+                {
+                    Success = false,
+                    Message = $"{request.PlayerName}'s ship(s) are not available or have already been deployed.",
+                    Data = {}
+                });
+            }
+
+            _logger?.Information($"Player {request.PlayerName}'s ships retrieved successfully");
             return Ok(new GlobalResponse
             {
                 Success = true,
-                Message = $"Player {playerName}'s ships retrieved successfully.",
+                Message = $"Player {request.PlayerName}'s ships retrieved successfully.",
                 Data = ships
             });
         }
         catch (Exception ex)
         {
-            _logger?.Error($"Error retrieving {playerName}'s ships. {ex.Message}");
+            _logger?.Error($"Error retrieving {request.PlayerName}'s ships. {ex.Message}");
             return BadRequest(new GlobalResponse
             {
                 Success = false,
-                Message = $"Error retrieving {playerName}'s ships. {ex.Message}",
+                Message = $"Error retrieving {request.PlayerName}'s ships. {ex.Message}",
                 Data = { }
             });
         }
     }
 
-    [HttpGet("board/{playerName}")]
+    [HttpGet("board")]
     [SwaggerOperation(
         Summary = "Get the board of a player",
         Description = "Retrieves the board for a specific player",
@@ -221,40 +218,65 @@ public class MainController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BoardResponse))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(GlobalResponse))]
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(GlobalResponse))]
-    public IActionResult GetBoard(string playerName)
+    public IActionResult GetBoard([FromQuery] GetBoardRequest request)
     {
-        var player = _mainService.GetPlayersInfo().FirstOrDefault(p => p.Name == playerName);
-        if (player == null)
+        if (!_mainService.IsGameInitialized())
         {
-            _logger?.Error($"Player {playerName} not found!");
-            return NotFound($"Player {playerName} not found!");
-        }
-
-        var board = _mainService.GetBoardInfo(player);
-        var boardResponse = new BoardResponse
-        {
-            Width = board.Width,
-            Height = board.Height
-        };
-
-        for (int row = 0; row < board.Height; row++)
-        {
-            for (int col = 0; col < board.Width; col++)
+            return BadRequest(new GlobalResponse
             {
-                var cell = board.Cells[row, col];
-                boardResponse.Cells.Add(new CellResponse
+                Success = false,
+                Message = "No Game found.",
+                Data = {}
+            });
+        }
+        else
+        {
+            try
+            {
+                var players = _mainService.GetPlayersInfo().FirstOrDefault(player => player.Name == request.PlayerName);
+                if (players == null)
+                {
+                    _logger?.Error($"Player {request.PlayerName} not found!");
+                    return NotFound($"Player {request.PlayerName} not found!");
+                }
+
+                var board = _mainService.GetBoardInfo(players);
+                var boardResponse = new BoardResponse
+                {
+                    Width = board.Width,
+                    Height = board.Height
+                };
+
+                for (int row = 0; row < board.Height; row++)
+                {
+                    for (int col = 0; col < board.Width; col++)
                     {
-                        Row = row,
-                        Col = col,
-                        HasShip = cell.Ship != null,
-                        IsSunk = cell.Ship != null && cell.Ship.IsSunk,
-                        IsHit = cell.IsHit
-                    });
+                        var cell = board.Cells[row, col];
+                        boardResponse.Cells.Add(new CellResponse
+                            {
+                                Row = row,
+                                Col = col,
+                                HasShip = cell.Ship != null,
+                                IsSunk = cell.Ship != null && cell.Ship.IsSunk,
+                                IsHit = cell.IsHit
+                            });
+                    }
+                }
+
+                _logger?.Information($"{request.PlayerName}'s board retrieved successfully!");
+                return Ok(boardResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger?.Error($"Error retrieving {request.PlayerName}'s board. {ex.Message}");
+                return BadRequest(new GlobalResponse
+                {
+                    Success = false,
+                    Message = $"Error retrieving {request.PlayerName}'s board. Error: {ex.Message}",
+                    Data = { }
+                });
             }
         }
-
-        _logger?.Information($"{playerName}'s board retrieved successfully!");
-        return Ok(boardResponse);
     }
 
     [HttpPost("place-ship")]
@@ -268,52 +290,79 @@ public class MainController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(GlobalResponse))]
     public IActionResult PlaceShip([FromBody] PlaceShipRequest request)
     {
-        var players = _mainService.GetPlayersInfo();
-        var player = players.FirstOrDefault(p => p.Name == request.PlayerName);
-        if (player == null)
+        if (!_mainService.IsGameInitialized())
         {
-            _logger?.Error($"Player {request.PlayerName} not found!");
-            return NotFound(new GlobalResponse
-            {
-                Success = false,
-                Message = $"Player {request.PlayerName} not found!",
-                Data = {}
-            });
-        }
-
-        var ships = _mainService.GetPlayerShips(player);
-        var ship = ships.FirstOrDefault(s => s.Length == request.ShipLength);
-        if (ship == null)
-        {
-            _logger?.Error($"Ship with length {request.ShipLength} is not available or has already been placed");
-            return NotFound(new GlobalResponse
-            {
-                Success = false,
-                Message = $"Ship with length {request.ShipLength} is not available or has already been placed",
-                Data = {}
-            });
-        }
-
-        bool success = _mainService.PlaceShips(player, ship, request.Start, request.End, out _message);
-
-        if (!success)
-        {
-            _logger?.Error(_message);
             return BadRequest(new GlobalResponse
             {
                 Success = false,
-                Message = "Ship placement failed. Check the coordinates and length of the ship!",
+                Message = "No Game found.",
                 Data = {}
             });
         }
-
-        _logger?.Information(_message);
-        return Ok(new GlobalResponse
+        else
         {
-            Success = true,
-            Message = "Ship successfully placed",
-            Data = ships
-        });
+            try
+            {
+                var players = _mainService
+                            .GetPlayersInfo()
+                            .FirstOrDefault(player => player.Name == request.PlayerName);
+                if (players == null)
+                {
+                    _logger?.Error($"Player {request.PlayerName} not found!");
+                    return NotFound(new GlobalResponse
+                    {
+                        Success = false,
+                        Message = $"Player {request.PlayerName} not found!",
+                        Data = {}
+                    });
+                }
+
+                var ships = _mainService
+                            .GetPlayerShips(players)
+                            .FirstOrDefault(ship => ship.Length == request.ShipLength);
+                if (ships == null)
+                {
+                    _logger?.Error($"Ship with length {request.ShipLength} is not available or has already been placed");
+                    return NotFound(new GlobalResponse
+                    {
+                        Success = false,
+                        Message = $"Ship with length {request.ShipLength} is not available or has already been placed",
+                        Data = {}
+                    });
+                }
+
+                bool success = _mainService.PlaceShips(players, ships, request.Start, request.End, out string message);
+
+                if (!success)
+                {
+                    _logger?.Error(message);
+                    return BadRequest(new GlobalResponse
+                    {
+                        Success = false,
+                        Message = "Ship placement failed. Check the coordinates and length of the ship!",
+                        Data = {}
+                    });
+                }
+
+                _logger?.Information(message);
+                return Ok(new GlobalResponse
+                {
+                    Success = true,
+                    Message = "Ship successfully placed",
+                    Data = ships
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger?.Error($"Error during placing ship. {ex.Message}");
+                return BadRequest(new GlobalResponse
+                {
+                    Success = false,
+                    Message = $"Error during placing ship. {ex.Message}",
+                    Data = {}
+                });
+            }
+        }
     }
 
     [HttpPost("remove-ship")]
@@ -327,41 +376,68 @@ public class MainController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(GlobalResponse))]
     public IActionResult RemoveShip([FromBody] RemoveShipRequest request)
     {
-        var players = _mainService.GetPlayersInfo();
-        var player = players.FirstOrDefault(p => p.Name == request.PlayerName);
-        if (player == null)
+        if (!_mainService.IsGameInitialized())
         {
-            _logger?.Error($"Player {request.PlayerName} not found!");
-            return NotFound(new GlobalResponse
+            return BadRequest(new GlobalResponse
             {
                 Success = false,
-                Message = $"Player {request.PlayerName} not found!",
+                Message = "No Game found.",
                 Data = {}
             });
         }
-
-        var ships = _mainService.GetPlayerShips(player);
-        var ship = ships.FirstOrDefault(s => s.Length == request.ShipLength && s.Positions != null);
-        if (ship == null)
+        else
         {
-            _logger?.Error($"Ship with length {request.ShipLength} is not available");
-            return NotFound(new GlobalResponse
+            try
             {
-                Success = false,
-                Message = $"Ship with length {request.ShipLength} is not available",
-                Data = {}
-            });
+                var players = _mainService
+                            .GetPlayersInfo()
+                            .FirstOrDefault(player => player.Name == request.PlayerName);
+                if (players == null)
+                {
+                    _logger?.Error($"Player {request.PlayerName} not found!");
+                    return NotFound(new GlobalResponse
+                    {
+                        Success = false,
+                        Message = $"Player {request.PlayerName} not found!",
+                        Data = {}
+                    });
+                }
+
+                var ships = _mainService
+                            .GetPlayerShips(players)
+                            .FirstOrDefault(ship => ship.Length == request.ShipLength && ship.Positions != null);
+                if (ships == null)
+                {
+                    _logger?.Error($"Ship with length {request.ShipLength} is not available");
+                    return NotFound(new GlobalResponse
+                    {
+                        Success = false,
+                        Message = $"Ship with length {request.ShipLength} is not available",
+                        Data = {}
+                    });
+                }
+
+                _mainService.RemoveShip(players, ships);
+
+                _logger?.Information($"Player {players.Name}'s Ship length {request.ShipLength} removed.");
+                return Ok(new GlobalResponse
+                {
+                    Success = true,
+                    Message = "Ship successfully removed",
+                    Data = {}
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger?.Error($"Error during removing ship. {ex.Message}");
+                return BadRequest(new GlobalResponse
+                {
+                    Success = false,
+                    Message = $"Error during removing ship. {ex.Message}",
+                    Data = {}
+                });
+            }
         }
-
-        _mainService.RemoveShip(player, ship);
-
-        _logger?.Information($"Player {player.Name}'s Ship length {request.ShipLength} removed.");
-        return Ok(new GlobalResponse
-        {
-            Success = true,
-            Message = "Ship successfully removed",
-            Data = {}
-        });
     }
 
     [HttpPost("attack")]
@@ -391,7 +467,7 @@ public class MainController : ControllerBase
                 var coordinate = _mainService.CoordinateInput(request.Coordinate);
                 var result = await _mainService.Attack(coordinate);
                 var scores = _mainService.GetAllPlayerScore()
-                    .ToDictionary(x => x.Key.Name, x => x.Value);
+                            .ToDictionary(x => x.Key.Name, x => x.Value);
 
                 return Ok(new AttackResponse
                 {
@@ -410,7 +486,7 @@ public class MainController : ControllerBase
                 return BadRequest(new GlobalResponse
                 {
                     Success = false,
-                    Message = $"Error during attack. {ex.Message}",
+                    Message = $"Error during attack. Error : {ex.Message}",
                     Data = {}
                 });
             }

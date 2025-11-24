@@ -1,7 +1,7 @@
 public interface IMainService
 {
     bool PlaceShips(IPlayer player, IShip ship, string coorStart, string coorEnd, out string message);
-    List<Coordinate> CheckShipPath(Coordinate coorStart, Coordinate coorEnd);
+    List<Coordinate> PlaceShipInPath(Coordinate coorStart, Coordinate coorEnd);
     Coordinate CoordinateInput(string input);
     Task<AttackResult> Attack(Coordinate coordinate);
     bool ReceivedAttack(IPlayer defender, Coordinate coordinate, out string message);
@@ -19,10 +19,9 @@ public interface IMainService
     // New Methods
     bool IsGameInitialized();
     void InitializeGame(CreateGameRequest request);
-    Serilog.ILogger GetLogger();
     Coordinate GetRandomShotForComputer(IPlayer human);
     void RemoveShip(IPlayer player, IShip ship);
 
     // Event
-    event Action<string>? OnMessageReceived;
+    event Action<string>? OnGameResult;
 }
