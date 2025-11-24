@@ -1,0 +1,68 @@
+<svg
+  width="128"
+  height="32"
+  viewBox="0 0 128 32"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <!-- background transparan -->
+  <rect x="0" y="0" width="128" height="32" fill="none" />
+
+  <!-- hull utama -->
+  <rect
+    x="4"
+    y="5"
+    width="120"
+    height="22"
+    rx="10"
+    ry="10"
+    fill="#111827"
+    stroke="#e5e7eb"
+    stroke-width="1.5"
+  />
+
+  <!-- haluan -->
+  <path
+    d="M4 16 L0 11 L0 21 Z"
+    fill="#111827"
+    stroke="#e5e7eb"
+    stroke-width="1.2"
+  />
+
+  <!-- buritan -->
+  <path
+    d="M124 16 L128 11 L128 21 Z"
+    fill="#111827"
+    stroke="#e5e7eb"
+    stroke-width="1.2"
+  />
+
+  <!-- dek dalam -->
+  <rect
+    x="10"
+    y="8"
+    width="108"
+    height="16"
+    rx="6"
+    ry="6"
+    fill="#1f2933"
+  />
+
+  <!-- superstructure tengah -->
+  <rect x="46" y="8" width="36" height="16" rx="6" ry="6" fill="#4b5563" />
+  <rect x="52" y="10" width="24" height="12" rx="4" ry="4" fill="#9ca3af" />
+
+  <!-- radar di atas tower -->
+  <rect x="62" y="5" width="4" height="4" rx="1" ry="1" fill="#e5e7eb" />
+  <rect x="58" y="3" width="12" height="2" rx="1" ry="1" fill="#e5e7eb" />
+
+  <!-- meriam depan dan belakang -->
+  <rect x="16" y="11" width="10" height="10" rx="2" ry="2" fill="#4b5563" />
+  <rect x="102" y="11" width="10" height="10" rx="2" ry="2" fill="#4b5563" />
+
+  <!-- jendela bulat sepanjang hull -->
+  <circle cx="28" cy="16" r="2" fill="#e5e7eb" />
+  <circle cx="44" cy="16" r="2" fill="#e5e7eb" />
+  <circle cx="64" cy="16" r="2" fill="#e5e7eb" />
+  <circle cx="84" cy="16" r="2" fill="#e5e7eb" />
+  <circle cx="100" cy="16" r="2" fill="#e5e7eb" />
+</svg>

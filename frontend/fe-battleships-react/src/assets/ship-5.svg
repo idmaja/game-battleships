@@ -1,0 +1,74 @@
+<svg
+  width="160"
+  height="32"
+  viewBox="0 0 160 32"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <!-- background transparan -->
+  <rect x="0" y="0" width="160" height="32" fill="none" />
+
+  <!-- hull utama -->
+  <rect
+    x="4"
+    y="5"
+    width="152"
+    height="22"
+    rx="10"
+    ry="10"
+    fill="#020617"
+    stroke="#e5e7eb"
+    stroke-width="1.5"
+  />
+
+  <!-- haluan -->
+  <path
+    d="M4 16 L0 11 L0 21 Z"
+    fill="#020617"
+    stroke="#e5e7eb"
+    stroke-width="1.2"
+  />
+
+  <!-- buritan -->
+  <path
+    d="M156 16 L160 11 L160 21 Z"
+    fill="#020617"
+    stroke="#e5e7eb"
+    stroke-width="1.2"
+  />
+
+  <!-- dek dalam -->
+  <rect
+    x="12"
+    y="8"
+    width="136"
+    height="16"
+    rx="7"
+    ry="7"
+    fill="#111827"
+  />
+
+  <!-- blok superstructure besar -->
+  <rect x="56" y="8" width="52" height="16" rx="7" ry="7" fill="#374151" />
+  <rect x="62" y="10" width="40" height="12" rx="4" ry="4" fill="#9ca3af" />
+
+  <!-- cerobong ganda -->
+  <rect x="70" y="4" width="6" height="8" rx="1" ry="1" fill="#4b5563" />
+  <rect x="88" y="4" width="6" height="8" rx="1" ry="1" fill="#4b5563" />
+
+  <!-- meriam depan bertingkat -->
+  <rect x="20" y="10" width="12" height="12" rx="3" ry="3" fill="#4b5563" />
+  <rect x="22" y="8" width="8" height="4" rx="1" ry="1" fill="#e5e7eb" />
+
+  <!-- meriam belakang bertingkat -->
+  <rect x="128" y="10" width="12" height="12" rx="3" ry="3" fill="#4b5563" />
+  <rect x="130" y="8" width="8" height="4" rx="1" ry="1" fill="#e5e7eb" />
+
+  <!-- jendela bulat sepanjang sisi -->
+  <circle cx="30" cy="16" r="2" fill="#e5e7eb" />
+  <circle cx="46" cy="16" r="2" fill="#e5e7eb" />
+  <circle cx="62" cy="16" r="2" fill="#e5e7eb" />
+  <circle cx="78" cy="16" r="2" fill="#e5e7eb" />
+  <circle cx="94" cy="16" r="2" fill="#e5e7eb" />
+  <circle cx="110" cy="16" r="2" fill="#e5e7eb" />
+  <circle cx="126" cy="16" r="2" fill="#e5e7eb" />
+</svg>

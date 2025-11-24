@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { initializeGame, placeShip, attack, getBoard, removeShip } from '../services/api';
 import { DndContext, useDraggable } from '@dnd-kit/core';
 import { BoardCell } from './Board';
+import ship3 from '../assets/ship-3.svg';
+import ship4 from '../assets/ship-4.svg';
+import ship5 from '../assets/ship-5.svg';
 import * as signalR from '@microsoft/signalr';
 
 export const MainLayout = () => {
@@ -21,6 +24,12 @@ export const MainLayout = () => {
     const [message, setMessage] = useState('');
     const [scores, setScores] = useState({});
     const [connection, setConnection] = useState(null);
+
+    const shipSprites = {
+        3: ship3,
+        4: ship4,
+        5: ship5,
+    };
 
     useEffect(() => {
         const newConnection = new signalR.HubConnectionBuilder()
@@ -100,7 +109,6 @@ export const MainLayout = () => {
             setShipsToPlace(newShips);
             setPlacedShips([...placedShips, { length: draggedShip, index: shipIndex, start, end }]);
             await loadBoards();
-            // setMessage(newShips.length === 0 ? 'All ships placed! Click Ready to start' : 'Drag ships to board');
         } catch (error) {
             setMessage('Invalid placement');
         }
@@ -118,7 +126,6 @@ export const MainLayout = () => {
             setPlacedShips(newPlaced);
             setShipsToPlace([...shipsToPlace, shipLength]);
             await loadBoards();
-            // setMessage(`Ship (${shipLength}) removed. Place it again`);
         } catch (error) {
             setMessage('Error removing ship');
         }
@@ -127,7 +134,6 @@ export const MainLayout = () => {
     const handleReady = () => {
         if (placedShips.length === allShips.length) {
             setGameState('playing');
-            // setMessage('Attack enemy board');
         }
     };
 
@@ -138,12 +144,10 @@ export const MainLayout = () => {
                 const response = await attack({ coordinate: coord });
                 const data = response.data;
                 
-                // setMessage(data.message + (data.computerHit ? ` | Computer hit` : ` | Computer missed`));
                 setScores(data.scores || {});
                 
                 if (data.isGameOver) {
                     setGameState('gameover');
-                    // setMessage('Game Over! ' + (data.scores?.[playerName] > data.scores?.[computerName] ? 'You Win!' : 'Computer Wins!'));
                 }
                 
                 loadBoards();
@@ -165,39 +169,56 @@ export const MainLayout = () => {
         }
     };
 
-    const DraggableShip = ({ length, index }) => {
-        const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `ship-${length}-${index}` });
-        const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined;
-        
+    const DraggableShip = ({ length, index, shipOrientation, setShipOrientation }) => {
+        const { attributes, listeners, setNodeRef, transform, isDragging } =
+            useDraggable({ id: `ship-${length}-${index}` });
+
+        // style dari dnd-kit
+        const baseStyle = transform
+            ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+            : {};
+
+        // gabungkan translate + rotate
+        const combinedStyle = {
+            ...baseStyle,
+            transform: `${baseStyle.transform || ''} ${
+            shipOrientation === 'vertical' ? 'rotate(90deg)' : ''
+            }`.trim(),
+        };
+
         const handleContextMenu = (e) => {
             e.preventDefault();
             if (isDragging) {
-                setShipOrientation(shipOrientation === 'horizontal' ? 'vertical' : 'horizontal');
+                setShipOrientation(
+                    shipOrientation === 'horizontal' ? 'vertical' : 'horizontal'
+                );
             }
         };
-        
+
+        const sprite = shipSprites[length];
+
         return (
-            <div 
-                ref={setNodeRef} 
-                style={style} 
-                {...listeners} 
-                {...attributes} 
+            <div
+                ref={setNodeRef}
+                style={combinedStyle}
+                {...listeners}
+                {...attributes}
                 onContextMenu={handleContextMenu}
-                className="cursor-move inline-block"
-            >
-                <div className={`flex gap-1 ${shipOrientation === 'vertical' ? 'flex-col' : 'flex-row'}`}>
-                    {Array.from({ length }).map((_, i) => (
-                        <div key={i} className="w-8 h-8 bg-gray-600 border border-white" />
-                    ))}
-                </div>
+                className="cursor-move inline-block select-none ship-rotatable"
+                >
+                <img
+                    src={sprite}
+                    alt={`ship-${length}`}
+                    className="pointer-events-none"
+                />
             </div>
         );
     };
 
     const renderBoard = (cells, isPlayer, name, score) => {
-        const h = parseInt(boardHeight);
-        const w = parseInt(boardWidth);
-        const grid = Array.from({ length: h }, () => Array(w).fill(null));
+        const height = parseInt(boardHeight);
+        const width = parseInt(boardWidth);
+        const grid = Array.from({ length: height }, () => Array(width).fill(null));
         
         cells.forEach(cell => {
             grid[cell.row][cell.col] = cell;
@@ -207,7 +228,7 @@ export const MainLayout = () => {
             <div className="flex-1 bg-white p-6 rounded shadow">
                 <h2 className="text-2xl font-bold mb-2">{name}</h2>
                 <p className="text-lg mb-4">Score: {score || 0}</p>
-                <div className="grid gap-1" style={{gridTemplateColumns: `repeat(${w}, minmax(0, 1fr))`, maxWidth: `${w * 36}px`}}>
+                <div className="grid gap-1" style={{gridTemplateColumns: `repeat(${width}, minmax(0, 1fr))`, maxWidth: `${width * 36}px`}}>
                 {grid.map((row, rowIdx) => 
                     row.map((cell, colIdx) => (
                     <BoardCell key={`${rowIdx}-${colIdx}`} row={rowIdx} col={colIdx} cell={cell} isPlayer={isPlayer} gameState={gameState} handleCellClick={handleCellClick} />
