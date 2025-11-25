@@ -6,6 +6,7 @@ import { ShipPlacement } from './ShipPlacement';
 import { GameBoard } from './GameBoard';
 import { Modal } from './Modal';
 import * as signalR from '@microsoft/signalr';
+import { BoatIcon, TrophyIcon } from '@phosphor-icons/react';
 
 export const MainLayout = () => {
     const [gameState, setGameState] = useState('init');
@@ -26,7 +27,7 @@ export const MainLayout = () => {
     const [connection, setConnection] = useState(null);
     const [dragOverCell, setDragOverCell] = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
-    const [modalContent, setModalContent] = useState({ title: '', message: '' });
+    const [modalContent, setModalContent] = useState({ type: '', title: '', message: '' });
 
     useEffect(() => {
         const newConnection = new signalR.HubConnectionBuilder()
@@ -42,7 +43,47 @@ export const MainLayout = () => {
             connection.start()
                 .then(() => {
                     connection.on('ReceiveMessage', (msg) => {
-                        setMessage(msg);
+                        if (msg.includes('Winner')) {
+                            const parts = msg.split('|');
+
+                            const parseData = str => {
+                                const clean = str.split(':')[1].trim();        
+                                const name = clean.split('(')[0].trim();          
+                                const score = clean.split('(')[1].split(')')[0]; 
+                                return { name, score };
+                            };
+
+                            const winnerData = parseData(parts[0]);
+                            const loserData = parseData(parts[1]);
+
+                            setModalContent({
+                                type: 'game-over',
+                                title: (
+                                    <span className='flex justify-between flex-auto gap-3'>
+                                        <TrophyIcon size={32} weight="bold" />
+                                        Game Over!
+                                    </span>
+                                ),
+                                message: (
+                                    <span className="mt-2 space-y-2 animate-fade">
+                                        <p className="text-xl">
+                                            <span className="text-3xl font-bold text-gray-900">{winnerData.name}</span>{" "}
+                                            <span className="font-bold text-blue-600">({winnerData.score})</span>{" "}
+                                            <span className="font-semibold text-green-600">wins!</span>
+                                        </p>
+
+                                        <p className="text-xl">
+                                            <span className="text-3xl font-bold text-red-700">{loserData.name}</span>{" "}
+                                            <span className="font-bold text-red-500">({loserData.score})</span>{" "}
+                                            <span className="font-semibold text-red-600">loses.</span>
+                                        </p>
+                                    </span>
+                                )
+                            });
+                            setModalOpen(true);
+                        } else {
+                            setMessage(msg);
+                        }
                     });
                 })
                 .catch(err => console.error('SignalR connection error:', err));
@@ -52,6 +93,25 @@ export const MainLayout = () => {
             };
         }
     }, [connection]);
+
+    useEffect(() => {
+        if (!message) return;
+
+        // if (message.includes('Error') || message.includes('Invalid') || message.includes('Too Many')) {
+        //     setModalContent({
+        //         title: 'Error / Invalid',
+        //         message: message
+        //     });
+        //     // setMessage(null);
+        //     setModalOpen(true);
+        // }
+
+        const timer = setTimeout(() => {
+            setMessage(null);
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, [message]);
 
     const handleInitGame = async (e) => {
         e.preventDefault();
@@ -65,6 +125,7 @@ export const MainLayout = () => {
         
         if (maxShipLength > minDimension) {
             setModalContent({
+                type: 'inv-ship-length',
                 title: 'Invalid Ship Length',
                 message: `Ship length (${maxShipLength}) exceeds board dimensions! Maximum allowed: ${minDimension}`
             });
@@ -77,6 +138,7 @@ export const MainLayout = () => {
         
         if (totalShipCells > totalBoardCells * 0.5) {
             setModalContent({
+                type: 'too-many-ships',
                 title: 'Too Many Ships',
                 message: `Total ship cells (${totalShipCells}) is too large for board size (${totalBoardCells} cells). Reduce ship lengths or increase board size.`
             });
@@ -98,7 +160,12 @@ export const MainLayout = () => {
             setGameState('setup');
             await loadBoards();
         } catch (error) {
-            setMessage('Error initializing game');
+            setModalContent({
+                type: 'error-init-game',
+                title: 'Error',
+                message: `Failed to Initialize Game, check the form again!`
+            });
+            setModalOpen(true);
         }
     };
 
@@ -228,6 +295,7 @@ export const MainLayout = () => {
                 <Modal 
                     isOpen={modalOpen}
                     onClose={() => setModalOpen(false)}
+                    type={modalContent.type}
                     title={modalContent.title}
                     message={modalContent.message}
                 />
@@ -235,19 +303,26 @@ export const MainLayout = () => {
         );
     }
 
-    return (
-        <DndContext 
-            onDragStart={(e) => setDraggedShip(parseInt(e.active.id.split('-')[1]))} 
-            onDragOver={handleDragOver}
-            onDragEnd={(e) => { handleDragEnd(e); setDragOverCell(null); }}
-        >
-            <div className="min-h-screen p-8 bg-gray-100">
-                <div className="mx-auto max-w-7xl">
-                <h1 className="mb-4 text-3xl font-bold text-center">Battleships</h1>
-                
-                <div className="p-4 mb-4 bg-white rounded shadow">
-                    <p className="font-semibold text-center">{message}</p>
+    const content = (
+        <div className="min-h-screen p-8 bg-gradient-to-br from-gray-50 to-gray-100">
+            <div className="mx-auto max-w-7xl">
+                <div className="mb-6 text-center">
+                    <div className='flex justify-center flex-auto gap-3'>
+                        <BoatIcon size={40} weight='bold'/>
+                        <h1 className="text-4xl font-bold text-gray-800">Battleships</h1>
+                    </div>
+                    <p className="mt-2 text-sm text-gray-500">
+                        {gameState === 'setup' && 'Place your ships on the board'}
+                        {gameState === 'playing' && 'Attack the enemy board!'}
+                        {gameState === 'gameover' && 'Game Over'}
+                    </p>
                 </div>
+                
+                {message && (
+                    <div className="max-w-2xl p-4 mx-auto mb-6 text-center bg-white border-l-4 border-blue-500 rounded-lg shadow-sm">
+                        <p className="text-gray-700">{message}</p>
+                    </div>
+                )}
 
                 {gameState === 'setup' && (
                     <ShipPlacement 
@@ -261,7 +336,7 @@ export const MainLayout = () => {
                     />
                 )}
 
-                <div className="flex gap-4">
+                <div className="flex flex-col gap-6 lg:flex-row">
                     <GameBoard 
                         cells={computerBoard}
                         isPlayer={false}
@@ -287,12 +362,50 @@ export const MainLayout = () => {
                 </div>
 
                 {gameState === 'gameover' && (
-                    <div className="mt-4 text-center">
-                    <button onClick={() => window.location.reload()} className="px-6 py-2 text-white bg-blue-500 rounded hover:bg-blue-600">New Game</button>
+                    <div className="mt-8 text-center">
+                        <button 
+                            onClick={() => window.location.reload()} 
+                            className="px-8 py-3 text-white font-semibold bg-blue-500 rounded-lg hover:bg-blue-600 active:scale-[0.98] transition-all shadow-md hover:shadow-lg"
+                        >
+                            New Game
+                        </button>
                     </div>
                 )}
-                </div>
             </div>
-        </DndContext>
+        </div>
+    );
+
+    if (gameState === 'setup') {
+        return (
+            <>
+                <DndContext 
+                    onDragStart={(e) => setDraggedShip(parseInt(e.active.id.split('-')[1]))} 
+                    onDragOver={handleDragOver}
+                    onDragEnd={(e) => { handleDragEnd(e); setDragOverCell(null); }}
+                >
+                    {content}
+                </DndContext>
+                <Modal 
+                    isOpen={modalOpen}
+                    onClose={() => setModalOpen(false)}
+                    type={modalContent.type}
+                    title={modalContent.title}
+                    message={modalContent.message}
+                />
+            </>
+        );
+    }
+
+    return (
+        <>
+            {content}
+            <Modal 
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                type={modalContent.type}
+                title={modalContent.title}
+                message={modalContent.message}
+            />
+        </>
     );
 };
