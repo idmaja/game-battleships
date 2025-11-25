@@ -1,17 +1,43 @@
 using Microsoft.OpenApi;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.SystemConsole.Themes;
 
 Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .MinimumLevel.Override("Microsoft", LogEventLevel.Fatal)
-            .MinimumLevel.Override("System", LogEventLevel.Fatal)
-            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Fatal)
-            .MinimumLevel.Override("Microsoft.AspNetCore.SignalR", LogEventLevel.Fatal)
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Debug)
+            .MinimumLevel.Override("System", LogEventLevel.Warning)
             .WriteTo.Console(
+                theme: AnsiConsoleTheme.Code,
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
             )
-            .WriteTo.File("logs/mainservice-.log", rollingInterval: RollingInterval.Day)
+            .WriteTo.Logger(fileLogger => fileLogger
+                .Filter.ByExcluding(logEvent =>
+                {
+                    var message = logEvent.RenderMessage();
+
+                    // --- (WHITELIST) ---
+                    if (message.Contains("Hosting started")) return false;
+                    if (message.Contains("Now listening on")) return false;
+
+                    // --- (BLACKLIST) ---
+                    if (message.Contains("Hosting") || message.Contains("Load") ||
+                        message.Contains("Application") || message.Contains("Content") ||
+                        message.Contains("Request") || message.Contains("Response") ||
+                        message.Contains("candidate") || message.Contains("Execut") ||
+                        message.Contains("Route") || message.Contains("Attempting") ||
+                        message.Contains("Connection") || message.Contains("Done") ||
+                        message.Contains("Wildcard") || message.Contains("formatter") ||
+                        message.Contains("Endpoint") || message.Contains("Registered"))
+                    {
+                        return true;
+                    }
+
+                    // Error, Warning, or self-log included
+                    return false; 
+                })
+                .WriteTo.File("logs/mainservice-.log", rollingInterval: RollingInterval.Day)
+            )
             .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,7 +53,7 @@ builder.Services.AddSwaggerGen(config =>
     {
         Title = "Battleships Game (VS Computer) API",
         Version = "v1",
-        Description = "API for Battleships Game (VS Computer) Application"
+        Description = "API for Battleships Game (VS Computer)"
     });
     config.EnableAnnotations();
 });

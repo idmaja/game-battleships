@@ -35,7 +35,7 @@ public class MainController : ControllerBase
             {
                 Success = true,
                 Message = "Game initialized successfully.",
-                Data = {}
+                Data = null
             });  
         }
         catch (Exception ex)
@@ -45,7 +45,7 @@ public class MainController : ControllerBase
             {
                 Success = false,
                 Message = $"Error initializing game. {ex.Message}",
-                Data = {}
+                Data = null
             });
         }
     }
@@ -67,7 +67,7 @@ public class MainController : ControllerBase
             {
                 Success = false,
                 Message = "No Game found.",
-                Data = {}
+                Data = null
             });
         }
         else
@@ -83,7 +83,7 @@ public class MainController : ControllerBase
                 {
                     Success = false,
                     Message = "No players found.",
-                    Data = {}
+                    Data = null
                 });
             }
 
@@ -114,7 +114,7 @@ public class MainController : ControllerBase
             {
                 Success = false,
                 Message = "No Game found.",
-                Data = {}
+                Data = null
             });
         }
         else
@@ -129,7 +129,7 @@ public class MainController : ControllerBase
                 {
                     Success = false,
                     Message = "No players found.",
-                    Data = {}
+                    Data = null
                 });
             }
 
@@ -174,7 +174,7 @@ public class MainController : ControllerBase
                 {
                     Success = false,
                     Message = $"Player {request.PlayerName} not found!",
-                    Data = {}
+                    Data = null
                 });
             }
             var ships = _mainService.GetPlayerShips(players);
@@ -185,7 +185,7 @@ public class MainController : ControllerBase
                 {
                     Success = false,
                     Message = $"{request.PlayerName}'s ship(s) are not available or have already been deployed.",
-                    Data = {}
+                    Data = null
                 });
             }
 
@@ -226,7 +226,7 @@ public class MainController : ControllerBase
             {
                 Success = false,
                 Message = "No Game found.",
-                Data = {}
+                Data = null
             });
         }
         else
@@ -296,7 +296,7 @@ public class MainController : ControllerBase
             {
                 Success = false,
                 Message = "No Game found.",
-                Data = {}
+                Data = null
             });
         }
         else
@@ -313,7 +313,7 @@ public class MainController : ControllerBase
                     {
                         Success = false,
                         Message = $"Player {request.PlayerName} not found!",
-                        Data = {}
+                        Data = null
                     });
                 }
 
@@ -327,7 +327,7 @@ public class MainController : ControllerBase
                     {
                         Success = false,
                         Message = $"Ship with length {request.ShipLength} is not available or has already been placed",
-                        Data = {}
+                        Data = null
                     });
                 }
 
@@ -340,7 +340,7 @@ public class MainController : ControllerBase
                     {
                         Success = false,
                         Message = "Ship placement failed. Check the coordinates and length of the ship!",
-                        Data = {}
+                        Data = null
                     });
                 }
 
@@ -359,7 +359,7 @@ public class MainController : ControllerBase
                 {
                     Success = false,
                     Message = $"Error during placing ship. {ex.Message}",
-                    Data = {}
+                    Data = null
                 });
             }
         }
@@ -382,7 +382,7 @@ public class MainController : ControllerBase
             {
                 Success = false,
                 Message = "No Game found.",
-                Data = {}
+                Data = null
             });
         }
         else
@@ -399,7 +399,7 @@ public class MainController : ControllerBase
                     {
                         Success = false,
                         Message = $"Player {request.PlayerName} not found!",
-                        Data = {}
+                        Data = null
                     });
                 }
 
@@ -413,7 +413,7 @@ public class MainController : ControllerBase
                     {
                         Success = false,
                         Message = $"Ship with length {request.ShipLength} is not available",
-                        Data = {}
+                        Data = null
                     });
                 }
 
@@ -424,7 +424,7 @@ public class MainController : ControllerBase
                 {
                     Success = true,
                     Message = "Ship successfully removed",
-                    Data = {}
+                    Data = null
                 });
             }
             catch (Exception ex)
@@ -434,7 +434,7 @@ public class MainController : ControllerBase
                 {
                     Success = false,
                     Message = $"Error during removing ship. {ex.Message}",
-                    Data = {}
+                    Data = null
                 });
             }
         }
@@ -457,7 +457,7 @@ public class MainController : ControllerBase
             {
                 Success = false,
                 Message = "No Game found.",
-                Data = {}
+                Data = null
             });
         }
         else
@@ -487,7 +487,7 @@ public class MainController : ControllerBase
                 {
                     Success = false,
                     Message = $"Error during attack. Error : {ex.Message}",
-                    Data = {}
+                    Data = null
                 });
             }
         }

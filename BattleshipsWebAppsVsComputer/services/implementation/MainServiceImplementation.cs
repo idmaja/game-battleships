@@ -70,7 +70,7 @@ public class MainService : IMainService
 
             while (!placed)
             {
-                bool horizontal = rand.Next(2) == 0;
+                bool horizontal = rand.Next(2) == 0; // diacak kemungkinan horizontal 50% == 0 dan vertikal 50% == 1
 
                 int row;
                 int col;
