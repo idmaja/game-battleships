@@ -27,7 +27,7 @@ export const DraggableShip = ({ length, index, shipOrientation }) => {
             style={style}
             {...listeners}
             {...attributes}
-            className="inline-block cursor-move select-none"
+            className="inline-block cursor-move select-none touch-none"
         >
             <img
                 src={sprite}

@@ -69,7 +69,7 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
     {
         policy
-            .WithOrigins("http://127.0.0.1:5500", "http://localhost:5500", "http://localhost:3000", "")
+            .WithOrigins("http://127.0.0.1:5500", "http://localhost:5500", "http://localhost:3000", "http://172.168.101.88:3000")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -82,15 +82,15 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger(c =>
+    app.UseSwagger(config => // file server
     {
-        c.RouteTemplate = "api-docs/{documentName}/battleship-api.json";
+        config.RouteTemplate = "battleships/api-docs/{documentName}/battleship-api.json";
     });
 
-    app.UseSwaggerUI(config =>
+    app.UseSwaggerUI(config => // UI
     {
-        config.SwaggerEndpoint("/api-docs/v1/battleship-api.json", "Battleships Game API v1");
-        config.RoutePrefix = "api-docs";
+        config.SwaggerEndpoint("/battleships/api-docs/v1/battleship-api.json", "Battleships Game API v1");
+        config.RoutePrefix = "battleships/api-docs";
     });
 }
 

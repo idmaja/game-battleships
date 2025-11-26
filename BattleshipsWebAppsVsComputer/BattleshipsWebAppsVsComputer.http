@@ -1,6 +1,72 @@
-@BattleshipsWebAppsVsComputer_HostAddress = http://localhost:5069
+@host = http://localhost:5069
+@api = {{host}}/api/v1/battleships
+@content = application/json
 
-GET {{BattleshipsWebAppsVsComputer_HostAddress}}/weatherforecast/
-Accept: application/json
 
-###
+### Initialize Game
+POST {{api}}/initialize-game
+Content-Type: {{content}}
+
+{
+  "playerName": "Player1",
+  "computerName": "Computer1",
+  "boardWidth": 10,
+  "boardHeight": 10,
+  "shipLengthsPlayer": [5,4,3],
+  "shipLengthsComputer": [5,4,3]
+}
+
+
+### Get Players
+GET {{api}}/players
+Accept: {{content}}
+
+
+### Get Board
+GET {{api}}/board
+Accept: {{content}}
+
+?playerName=Player1
+
+
+### Place Ship
+POST {{api}}/place-ship
+Content-Type: {{content}}
+
+{
+  "playerName": "Player1",
+  "shipLength": 5,
+  "start": "A1",
+  "end": "A5"
+}
+
+
+### Remove Ship
+POST {{api}}/remove-ship
+Content-Type: {{content}}
+
+{
+  "playerName": "Player1",
+  "shipLength": 5
+}
+
+
+### Attack
+POST {{api}}/attack
+Content-Type: {{content}}
+
+{
+  "coordinate": "B3"
+}
+
+
+### Get Scores
+GET {{api}}/scores
+Accept: {{content}}
+
+
+### Get Player Ships
+GET {{api}}/ships
+Accept: {{content}}
+
+?playerName=Player1

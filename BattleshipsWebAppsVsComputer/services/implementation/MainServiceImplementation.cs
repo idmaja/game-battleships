@@ -22,7 +22,7 @@ public class MainService : IMainService
         _playerShips = new Dictionary<IPlayer, List<IShip>>();
         _playerScores = new Dictionary<IPlayer, int>();
         OnGameResult += (message) => 
-            _logger.Information($"\u001b[1m{message}\u001b[0m\n");
+            _logger.Information($"\n{message}\n");
     }
 
     public void InitializeGame(CreateGameRequest request)
@@ -337,6 +337,7 @@ public class MainService : IMainService
             }
         }
     }
+
     public Coordinate GetRandomCoordinateForComputer(IPlayer computer)
     {
         var board = _playerBoards[computer];

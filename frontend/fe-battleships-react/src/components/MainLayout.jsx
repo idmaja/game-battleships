@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { initializeGame, placeShip, attack, getBoard, removeShip } from '../services/api';
-import { DndContext } from '@dnd-kit/core';
+import { DndContext, MouseSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { GameSetup } from './GameSetup';
 import { ShipPlacement } from './ShipPlacement';
 import { GameBoard } from './GameBoard';
 import { Modal } from './Modal';
 import * as signalR from '@microsoft/signalr';
-import { BoatIcon, TrophyIcon } from '@phosphor-icons/react';
+import { BoatIcon, SmileySadIcon, TrophyIcon } from '@phosphor-icons/react';
 
 export const MainLayout = () => {
     const [gameState, setGameState] = useState('init');
@@ -31,7 +31,8 @@ export const MainLayout = () => {
 
     useEffect(() => {
         const newConnection = new signalR.HubConnectionBuilder()
-            .withUrl('http://localhost:5069/gameHub')
+            // .withUrl('http://localhost:5069/gameHub') // private network
+            .withUrl('http://172.168.101.88:5069/gameHub') // public network
             .withAutomaticReconnect()
             .build();
 
@@ -59,23 +60,31 @@ export const MainLayout = () => {
                             setModalContent({
                                 type: 'game-over',
                                 title: (
-                                    <span className='flex justify-between flex-auto gap-3'>
-                                        <TrophyIcon size={32} weight="bold" />
+                                    <span className='flex justify-center'>
                                         Game Over!
                                     </span>
                                 ),
                                 message: (
                                     <span className="mt-2 space-y-2 animate-fade">
-                                        <p className="text-xl">
-                                            <span className="text-3xl font-bold text-gray-900">{winnerData.name}</span>{" "}
-                                            <span className="font-bold text-blue-600">({winnerData.score})</span>{" "}
+                                        <p className="text-xl flex items-center gap-2">
+                                            <span className="text-2xl font-bold text-gray-900">{winnerData.name}</span>
+                                            <span className="font-bold text-blue-600">({winnerData.score})</span>
                                             <span className="font-semibold text-green-600">wins!</span>
+                                            <TrophyIcon 
+                                                size={32} 
+                                                weight="fill" 
+                                                className="text-yellow-400 p-1 drop-shadow-[0_0_10px_rgba(255,215,0,0.9)] animate-pulse"
+                                            />
                                         </p>
-
-                                        <p className="text-xl">
-                                            <span className="text-3xl font-bold text-red-700">{loserData.name}</span>{" "}
-                                            <span className="font-bold text-red-500">({loserData.score})</span>{" "}
+                                        <p className="text-xl flex items-center gap-2">
+                                            <span className="text-2xl font-bold text-red-700">{loserData.name}</span>
+                                            <span className="font-bold text-red-500">({loserData.score})</span>
                                             <span className="font-semibold text-red-600">loses.</span>
+                                            <SmileySadIcon 
+                                                size={32} 
+                                                weight="fill"
+                                                className="text-red-600 p-1 drop-shadow-[0_0_10px_rgba(255, 215, 0, 0.9)] animate-pulse" 
+                                            />
                                         </p>
                                     </span>
                                 )
@@ -112,6 +121,19 @@ export const MainLayout = () => {
 
         return () => clearTimeout(timer);
     }, [message]);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 5,
+            },
+        }),
+        useSensor(MouseSensor, {
+            activationConstraint: {
+                distance: 5,
+            },
+        })
+    );
 
     const handleInitGame = async (e) => {
         e.preventDefault();
@@ -163,7 +185,7 @@ export const MainLayout = () => {
             setModalContent({
                 type: 'error-init-game',
                 title: 'Error',
-                message: `Failed to Initialize Game, check the form again!`
+                message: `Failed to Initialize Game: ${error}`
             });
             setModalOpen(true);
         }
@@ -337,28 +359,32 @@ export const MainLayout = () => {
                 )}
 
                 <div className="flex flex-col gap-6 lg:flex-row">
-                    <GameBoard 
-                        cells={computerBoard}
-                        isPlayer={false}
-                        name={computerName}
-                        score={scores[computerName]}
-                        boardWidth={boardWidth}
-                        boardHeight={boardHeight}
-                        gameState={gameState}
-                        handleCellClick={handleCellClick}
-                        previewCells={[]}
-                    />
-                    <GameBoard 
-                        cells={playerBoard}
-                        isPlayer={true}
-                        name={playerName}
-                        score={scores[playerName]}
-                        boardWidth={boardWidth}
-                        boardHeight={boardHeight}
-                        gameState={gameState}
-                        handleCellClick={handleCellClick}
-                        previewCells={previewCells}
-                    />
+                    <div className='order-2 lg:order-1'>
+                        <GameBoard 
+                            cells={computerBoard}
+                            isPlayer={false}
+                            name={computerName}
+                            score={scores[computerName]}
+                            boardWidth={boardWidth}
+                            boardHeight={boardHeight}
+                            gameState={gameState}
+                            handleCellClick={handleCellClick}
+                            previewCells={[]}
+                        />
+                    </div>
+                    <div className='order-1 lg:order-2'>
+                        <GameBoard 
+                            cells={playerBoard}
+                            isPlayer={true}
+                            name={playerName}
+                            score={scores[playerName]}
+                            boardWidth={boardWidth}
+                            boardHeight={boardHeight}
+                            gameState={gameState}
+                            handleCellClick={handleCellClick}
+                            previewCells={previewCells}
+                        />
+                    </div>
                 </div>
 
                 {gameState === 'gameover' && (
@@ -379,6 +405,7 @@ export const MainLayout = () => {
         return (
             <>
                 <DndContext 
+                    sensors={sensors}
                     onDragStart={(e) => setDraggedShip(parseInt(e.active.id.split('-')[1]))} 
                     onDragOver={handleDragOver}
                     onDragEnd={(e) => { handleDragEnd(e); setDragOverCell(null); }}
