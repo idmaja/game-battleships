@@ -35,7 +35,9 @@ export const DraggableShip = ({ length, index, shipOrientation }) => {
                 className="pointer-events-none"
                 style={{
                     width: shipOrientation === 'vertical' ? '100px' : `${length * 32}px`,
-                    height: shipOrientation === 'vertical' ? `${length * 32}px` : '100px',
+                    height: shipOrientation === 'vertical' ? `${length * 20}px` : '100px',
+                    // width: `${length * 32}px`,
+                    // height: '100px',
                     transform: shipOrientation === 'vertical' ? 'rotate(90deg)' : 'rotate(0deg)',
                     transition: 'transform 0.3s'
                 }}

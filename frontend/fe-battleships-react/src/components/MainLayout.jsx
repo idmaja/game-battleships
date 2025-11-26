@@ -6,7 +6,8 @@ import { ShipPlacement } from './ShipPlacement';
 import { GameBoard } from './GameBoard';
 import { Modal } from './Modal';
 import * as signalR from '@microsoft/signalr';
-import { BoatIcon, SmileySadIcon, TrophyIcon } from '@phosphor-icons/react';
+import { SmileySadIcon, TrophyIcon } from '@phosphor-icons/react';
+import { ReactComponent as GameLogo } from '../assets/game-logo.svg';
 
 export const MainLayout = () => {
     const [gameState, setGameState] = useState('init');
@@ -31,8 +32,8 @@ export const MainLayout = () => {
 
     useEffect(() => {
         const newConnection = new signalR.HubConnectionBuilder()
-            // .withUrl('http://localhost:5069/gameHub') // private network
-            .withUrl('http://172.168.101.88:5069/gameHub') // public network
+            .withUrl('http://localhost:5069/gameHub') // private network
+            // .withUrl('http://172.168.101.88:5069/gameHub') // public network
             .withAutomaticReconnect()
             .build();
 
@@ -66,7 +67,7 @@ export const MainLayout = () => {
                                 ),
                                 message: (
                                     <span className="mt-2 space-y-2 animate-fade">
-                                        <p className="text-xl flex items-center gap-2">
+                                        <p className="flex items-center gap-2 text-xl">
                                             <span className="text-2xl font-bold text-gray-900">{winnerData.name}</span>
                                             <span className="font-bold text-blue-600">({winnerData.score})</span>
                                             <span className="font-semibold text-green-600">wins!</span>
@@ -76,7 +77,7 @@ export const MainLayout = () => {
                                                 className="text-yellow-400 p-1 drop-shadow-[0_0_10px_rgba(255,215,0,0.9)] animate-pulse"
                                             />
                                         </p>
-                                        <p className="text-xl flex items-center gap-2">
+                                        <p className="flex items-center gap-2 text-xl">
                                             <span className="text-2xl font-bold text-red-700">{loserData.name}</span>
                                             <span className="font-bold text-red-500">({loserData.score})</span>
                                             <span className="font-semibold text-red-600">loses.</span>
@@ -103,6 +104,7 @@ export const MainLayout = () => {
         }
     }, [connection]);
 
+    // set timer message notif
     useEffect(() => {
         if (!message) return;
 
@@ -256,7 +258,7 @@ export const MainLayout = () => {
                 
                 if (response.data.isGameOver) setGameState('gameover');
                 
-                loadBoards();
+                await loadBoards();
             } catch (error) {
                 setMessage('Invalid attack');
             }
@@ -330,8 +332,9 @@ export const MainLayout = () => {
             <div className="mx-auto max-w-7xl">
                 <div className="mb-6 text-center">
                     <div className='flex justify-center flex-auto gap-3'>
-                        <BoatIcon size={40} weight='bold'/>
-                        <h1 className="text-4xl font-bold text-gray-800">Battleships</h1>
+                        <div className='text-3xl'>
+                            <GameLogo/>
+                        </div>
                     </div>
                     <p className="mt-2 text-sm text-gray-500">
                         {gameState === 'setup' && 'Place your ships on the board'}
@@ -359,7 +362,7 @@ export const MainLayout = () => {
                 )}
 
                 <div className="flex flex-col gap-6 lg:flex-row">
-                    <div className='order-2 lg:order-1'>
+                    <div className='flex-1 order-2 lg:order-1v'>
                         <GameBoard 
                             cells={computerBoard}
                             isPlayer={false}
@@ -370,9 +373,15 @@ export const MainLayout = () => {
                             gameState={gameState}
                             handleCellClick={handleCellClick}
                             previewCells={[]}
+                            isWinner={
+                                (gameState === 'playing' || gameState === 'gameover') 
+                                && (scores[computerName] || 0) > (scores[playerName] || 0) 
+                                ? true : (scores[computerName] || 0) < (scores[playerName] || 0) 
+                                ? false : undefined
+                            }
                         />
                     </div>
-                    <div className='order-1 lg:order-2'>
+                    <div className='flex-1 order-1 lg:order-2'>
                         <GameBoard 
                             cells={playerBoard}
                             isPlayer={true}
@@ -383,6 +392,12 @@ export const MainLayout = () => {
                             gameState={gameState}
                             handleCellClick={handleCellClick}
                             previewCells={previewCells}
+                            isWinner={
+                                (gameState === 'playing' || gameState === 'gameover') 
+                                && (scores[playerName] || 0) > (scores[computerName] || 0) 
+                                ? true : (scores[playerName] || 0) < (scores[computerName] || 0) 
+                                ? false : undefined
+                            }
                         />
                     </div>
                 </div>

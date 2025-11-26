@@ -1,4 +1,5 @@
 import { BoardCell } from './Board';
+import { TrophyIcon, SmileySadIcon } from '@phosphor-icons/react';
 
 export const GameBoard = ({ 
     cells, 
@@ -9,7 +10,8 @@ export const GameBoard = ({
     boardHeight, 
     gameState, 
     handleCellClick, 
-    previewCells 
+    previewCells,
+    isWinner 
 }) => {
     const height = parseInt(boardHeight);
     const width = parseInt(boardWidth);
@@ -27,6 +29,8 @@ export const GameBoard = ({
                     <span className={`px-2 py-1 text-xs font-semibold rounded ${isPlayer ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {isPlayer ? 'YOU' : 'ENEMY'}
                     </span>
+                    {isWinner === true && <TrophyIcon size={24} weight="fill" className="text-yellow-500" />}
+                    {isWinner === false && <SmileySadIcon size={24} weight="fill" className="text-gray-400" />}
                 </div>
                 <p className="text-sm text-gray-600">Score: <span className="font-semibold text-blue-600">{score || 0}</span></p>
             </div>
@@ -48,6 +52,32 @@ export const GameBoard = ({
                         );
                     })
                 )}
+            </div>
+            
+            {/* LEGEND */}
+            <div className="flex flex-wrap gap-3 mt-4 text-xs">
+                <div className="flex items-center gap-1.5">
+                    <div className="w-4 h-4 bg-blue-200 border border-gray-400 rounded-[4px]"></div>
+                    <span className="text-gray-600">Water</span>
+                </div>
+                {isPlayer && (
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-4 h-4 bg-gray-400 border border-gray-400 rounded-[4px]"></div>
+                        <span className="text-gray-600">Your Ship</span>
+                    </div>
+                )}
+                <div className="flex items-center gap-1.5">
+                    <div className="w-4 h-4 bg-gray-500 border border-gray-400 rounded-[4px]"></div>
+                    <span className="text-gray-600">Miss</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-4 h-4 bg-red-500 border border-gray-400 rounded-[4px]"></div>
+                    <span className="text-gray-600">Hit</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-4 h-4 bg-red-600 border border-gray-400 rounded-[4px]"></div>
+                    <span className="text-gray-600">Sunk</span>
+                </div>
             </div>
         </div>
     );

@@ -1,3 +1,5 @@
+import { ReactComponent as GameLogo } from '../assets/game-logo.svg';
+
 export const GameSetup = ({ 
     playerName, 
     setPlayerName, 
@@ -15,7 +17,9 @@ export const GameSetup = ({
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
             <div className="w-full max-w-lg p-10 bg-white border border-gray-100 shadow-xl rounded-2xl">
                 <div className="mb-8 text-center">
-                    <h1 className="mb-2 text-4xl font-bold text-gray-800">Battleships</h1>
+                    <h1 className="flex justify-center mb-2 text-4xl font-bold text-gray-800">
+                        <GameLogo/>
+                    </h1>
                     <p className="text-sm text-gray-500">Configure your game settings</p>
                 </div>
                 
@@ -28,6 +32,7 @@ export const GameSetup = ({
                                 value={playerName} 
                                 onChange={(e) => setPlayerName(e.target.value)} 
                                 required 
+                                minlength = "3"
                                 className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:border-blue-400 focus:outline-none transition-colors" 
                                 placeholder="Your name"
                             />
@@ -38,7 +43,8 @@ export const GameSetup = ({
                                 type="text" 
                                 value={computerName} 
                                 onChange={(e) => setComputerName(e.target.value)} 
-                                required 
+                                required
+                                minlength = "3" 
                                 className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:border-blue-400 focus:outline-none transition-colors" 
                                 placeholder="AI opponent"
                             />
@@ -53,7 +59,7 @@ export const GameSetup = ({
                                 value={boardWidth} 
                                 onChange={(e) => setBoardWidth(e.target.value)} 
                                 required 
-                                min="5" 
+                                min="3" 
                                 max="20" 
                                 className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:border-blue-400 focus:outline-none transition-colors" 
                             />
@@ -65,7 +71,7 @@ export const GameSetup = ({
                                 value={boardHeight} 
                                 onChange={(e) => setBoardHeight(e.target.value)} 
                                 required 
-                                min="5" 
+                                min="3" 
                                 max="20" 
                                 className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:border-blue-400 focus:outline-none transition-colors" 
                             />

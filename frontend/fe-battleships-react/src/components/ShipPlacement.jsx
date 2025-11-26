@@ -12,7 +12,7 @@ export const ShipPlacement = ({
 }) => {
     return (
         <div className="p-6 mb-6 bg-white rounded-lg shadow-md">
-            <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+            <div className={`flex flex-wrap items-center justify-center gap-3 ${(placedShips.length !== allShips.length) && 'py-5'} mb-6`}>
                 {shipsToPlace.map((ship, idx) => (
                     <DraggableShip 
                         key={`${ship}-${idx}`} 

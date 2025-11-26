@@ -20,7 +20,7 @@ export const BoardCell = ({ row, col, cell, isPlayer, gameState, handleCellClick
         <div
             ref={gameState === 'setup' && isPlayer ? setNodeRef : null}
             onClick={() => canClick && handleCellClick(row, col, isPlayer)}
-            className={`w-8 h-8 border border-gray-400 ${bgColor} ${canClick ? 'cursor-pointer hover:bg-blue-300' : ''}`}
+            className={`w-8 h-8 border rounded-sm border-gray-400 ${bgColor} ${canClick ? 'cursor-pointer hover:bg-blue-300' : ''}`}
         />
     );
 };
