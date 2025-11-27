@@ -78,13 +78,17 @@ To play the Web App version (Player vs Computer), you need to run both the Backe
 
 1. Open your terminal and navigate to the backend folder:Bash
     
-    `cd BattleshipsWebAppsVsComputer`
+```
+cd BattleshipsWebAppsVsComputer
+```
     
 2. Run the application:Bash
     
-    `dotnet run`
+```
+dotnet run
+```
     
-    *The backend typically starts at `http://localhost:5069` (configured in `launchSettings.json`).*
+*The backend typically starts at `http://localhost:5069` (configured in `launchSettings.json`).*
     
 
 ### Step 2: Configure the Frontend
@@ -94,26 +98,32 @@ Before running the frontend, ensure the API URL matches your local backend addre
 1. Open `frontend/fe-battleships-react/src/services/api.js`.
 2. Check the `API_BASE_URL` variable. If running locally, ensure it points to localhost:JavaScript
     
-    `const API_BASE_URL = 'http://localhost:5069/api/v1/battleships';`
+```
+const API_BASE_URL = 'http://localhost:5069/api/v1/battleships';
+```
     
-3. Do the same for the SignalR connection in `frontend/fe-battleships-react/src/components/MainLayout.jsx`:JavaScript
-    
-    `.withUrl('http://localhost:5069/gameHub')`
+3. Do the same for the SignalR connection in `MainLayout.jsx`: `.withUrl('http://localhost:5069/gameHub')`
     
 
 ### Step 3: Run the Frontend
 
 1. Open a new terminal window and navigate to the frontend folder:Bash
     
-    `cd frontend/fe-battleships-react`
+```
+cd frontend/fe-battleships-react
+```
     
 2. Install dependencies (if you haven't already):Bash
     
-    `npm install`
+```
+npm install
+```
     
 3. Start the React application:Bash
     
-    `npm start`
+```
+npm start
+```
     
 4. Open your browser and go to `http://localhost:3000`.
 
@@ -125,11 +135,15 @@ If you want to test the game logic via the CLI:
 
 1. Navigate to the console folder:Bash
     
-    `cd BattleshipsConsole`
+```
+cd BattleshipsConsole
+```
     
 2. Run the application:Bash
     
-    `dotnet run`
+```
+dotnet run
+```
     
 
 ---
