@@ -1,6 +1,6 @@
-public class GlobalResponse
+public class GlobalResponse<T>
 {
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
-    public object? Data { get; set; } // for a dynamic data type
+    public T? Data { get; set; } // for a dynamic data type
 }

@@ -7,9 +7,10 @@ public class MainService : IMainService
     private Dictionary<IPlayer, int> _playerScores;
     private Dictionary<IPlayer, IBoard> _playerBoards;
     private Dictionary<IPlayer, List<IShip>> _playerShips;
-
     private readonly Serilog.ILogger _logger;
     private readonly IMessageService _messageService;
+    private readonly Random _rand = new();
+
 
     public event Action<string>? OnGameResult;
     
@@ -32,6 +33,12 @@ public class MainService : IMainService
 
         var boardPlayer = new Board(request.BoardWidth, request.BoardHeight);
         var boardComputer = new Board(request.BoardWidth, request.BoardHeight);
+
+        if (request.ShipLengthsPlayer.Count == 0 || request.ShipLengthsComputer.Count == 0)
+        {
+            _logger.Error("Ship lengths cannot be empty");
+            throw new ArgumentException("Ship lengths cannot be empty");
+        }
 
         var ships1 = request.ShipLengthsPlayer
             .Select(length => (IShip)new Ship(length, 0, false, new List<Coordinate>()))
@@ -62,24 +69,22 @@ public class MainService : IMainService
         };
 
         var board = _playerBoards[_players[1]];
-        var rand = new Random();
-
         foreach (var ship in ships2)
         {
             bool placed = false;
 
             while (!placed)
             {
-                bool horizontal = rand.Next(2) == 0; // diacak kemungkinan horizontal 50% == 0 dan vertikal 50% == 1
+                bool horizontal = _rand.Next(2) == 0; // diacak kemungkinan horizontal 50% == 0 dan vertikal 50% == 1
 
-                int row;
+                int row; 
                 int col;
 
                 if (horizontal)
                 {
                     // row bebas, col dibatasi supaya muat ship.Length
-                    row = rand.Next(0, board.Height);
-                    col = rand.Next(0, board.Width - ship.Length + 1);
+                    row = _rand.Next(0, board.Height);
+                    col = _rand.Next(0, board.Width - ship.Length + 1);
 
                     string start = $"{(char)('A' + col)}{row + 1}";
                     string end   = $"{(char)('A' + col + ship.Length - 1)}{row + 1}";
@@ -89,8 +94,8 @@ public class MainService : IMainService
                 else
                 {
                     // col bebas, row dibatasi supaya muat ship.Length
-                    col = rand.Next(0, board.Width);
-                    row = rand.Next(0, board.Height - ship.Length + 1);
+                    col = _rand.Next(0, board.Width);
+                    row = _rand.Next(0, board.Height - ship.Length + 1);
 
                     string start = $"{(char)('A' + col)}{row + 1}";
                     string end   = $"{(char)('A' + col)}{row + ship.Length}";
@@ -126,12 +131,9 @@ public class MainService : IMainService
             return false;
         }
 
-        int distance;
-
-        if (isHorizontal) 
-            distance = Math.Abs(end.Col - start.Col) + 1;
-        else
-            distance = Math.Abs(end.Row - start.Row) + 1;
+        int distance = isHorizontal
+            ? Math.Abs(end.Col - start.Col) + 1
+            : Math.Abs(end.Row - start.Row) + 1;
 
         if (distance != ship.Length)
         {
@@ -173,18 +175,17 @@ public class MainService : IMainService
         {
             foreach (var pos in ship.Positions)
             {
-                if (pos.Row >= 0 && pos.Row < board.Height &&
-                    pos.Col >= 0 && pos.Col < board.Width)
-                {
-                    if (board.Cells[pos.Row, pos.Col].Ship == ship)
-                    {
-                        board.Cells[pos.Row, pos.Col].Ship = null;
-                    }
-                }
+                bool inside =
+                    pos.Row >= 0 && pos.Row < board.Height &&
+                    pos.Col >= 0 && pos.Col < board.Width;
+
+                if (inside && board.Cells[pos.Row, pos.Col].Ship == ship)
+                    board.Cells[pos.Row, pos.Col].Ship = null;
             }
 
             ship.Positions = new List<Coordinate>();
         }
+
     }
 
     public List<Coordinate> PlaceShipInPath(Coordinate coorStart, Coordinate coorEnd)
@@ -198,7 +199,9 @@ public class MainService : IMainService
             int endCol = Math.Max(coorStart.Col, coorEnd.Col);
             
             for (int col = startCol; col <= endCol; col++)
+            {
                 coordinates.Add(new Coordinate(coorStart.Row, col));
+            }
         }
         else if (coorStart.Col == coorEnd.Col)
         {
@@ -206,7 +209,9 @@ public class MainService : IMainService
             int endRow = Math.Max(coorStart.Row, coorEnd.Row);
             
             for (int row = startRow; row <= endRow; row++)
+            {
                 coordinates.Add(new Coordinate(row, coorStart.Col));
+            }
         }
         else
         {
@@ -224,11 +229,17 @@ public class MainService : IMainService
             int letterCol = letter - 'A';
             bool IsLetter = int.TryParse(input.Substring(1), out int letterRow);
 
+            if (string.IsNullOrWhiteSpace(input) || input.Length < 2)
+            {
+                _logger.Error($"Invalid input. Please enter a valid coordinate (e.g., A1, B4, and so on).");
+                return new Coordinate(0,0);
+            }
+
             return new Coordinate(letterRow - 1, letterCol);
         }
-        catch
+        catch (Exception ex)
         {
-            _logger.Error($"Invalid input. Please enter a valid coordinate (e.g., A1, B4, and so on).");
+            _logger.Error($"Error Coordinate input: {ex.Message}");
             return new Coordinate(0, 0);
         }
     }
@@ -250,7 +261,6 @@ public class MainService : IMainService
             IncreasePlayerScore(human);
 
             // coordinate = {(char)(coordinate.Col + 'A')}{coordinate.Row + 1}
-            messageNotification.Append($"Attack by {human.Name} hit the target! | ");
             
             if (IsAllShipsSunk(computer))
             {
@@ -267,6 +277,8 @@ public class MainService : IMainService
                     IsGameOver = true,
                 };
             }
+
+            messageNotification.Append($"Attack by {human.Name} hit the target! | ");
         }
         else
         {
@@ -283,7 +295,6 @@ public class MainService : IMainService
             IncreasePlayerScore(computer);
 
             // coordinate = {(char)(coordinateComputerShot.Col + 'A')}{coordinateComputerShot.Row + 1}
-            messageNotification.Append($"Attack by {computer.Name} hit the target!");
 
             if (IsAllShipsSunk(human))
             {
@@ -301,6 +312,8 @@ public class MainService : IMainService
                     Coordinate = coordinateComputerShot
                 };
             }
+
+            messageNotification.Append($"Attack by {computer.Name} hit the target!");
         }
         else
         {
@@ -322,12 +335,11 @@ public class MainService : IMainService
     public Coordinate GetRandomShotForComputer(IPlayer human)
     {
         var board = _playerBoards[human];
-        var rand = new Random();
 
         while (true)
         {
-            int row = rand.Next(0, board.Height);
-            int col = rand.Next(0, board.Width);
+            int row = _rand.Next(0, board.Height);
+            int col = _rand.Next(0, board.Width);
 
             var cell = board.Cells[row, col];
 
@@ -335,20 +347,6 @@ public class MainService : IMainService
             {
                 return new Coordinate(row, col);
             }
-        }
-    }
-
-    public Coordinate GetRandomCoordinateForComputer(IPlayer computer)
-    {
-        var board = _playerBoards[computer];
-        var rand = new Random();
-
-        while (true)
-        {
-            int row = rand.Next(0, board.Height);
-            int col = rand.Next(0, board.Width);
-
-            return new Coordinate(row, col);
         }
     }
 
@@ -371,8 +369,10 @@ public class MainService : IMainService
 
         IncreaseShipHit(cell);
         
-        if (cell.Ship.Hits >= cell.Ship.Length) 
+        if (cell.Ship.Hits >= cell.Ship.Length)
+        {
             cell.Ship.IsSunk = true;
+        } 
 
         message = "Ship hit successfully.";
         cell.IsHit = true;
@@ -390,13 +390,15 @@ public class MainService : IMainService
     public void IncreasePlayerScore(IPlayer player) => _playerScores[player]++;
     public void IncreaseShipHit(ICell cell) => cell.Ship!.Hits++;
 
-    public virtual void GameResult(string message) 
-        => OnGameResult?.Invoke(message); // synchronous
-
+    public virtual void GameResult(string message) => OnGameResult?.Invoke(message); // synchronous
     public virtual async Task MessageNotification(string message)
     {
-        // OnMessageReceived?.Invoke(message); // synchronous
-        await _messageService.SendMessageAsync(message); // asynchronous 
+        try {
+            await _messageService.SendMessageAsync(message); // asynchronous 
+        }
+        catch(Exception ex) {
+            _logger.Warning("Message failed: " + ex.Message);
+        } 
     }
 
     public bool IsGameInitialized()

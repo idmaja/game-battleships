@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Battleships by IDM",
+  "name": "Simple Battleships Game made w/ React + .NET",
   "icons": [
     {
       "src": "favicon.ico",

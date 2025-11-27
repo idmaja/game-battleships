@@ -32,7 +32,7 @@ export const GameSetup = ({
                                 value={playerName} 
                                 onChange={(e) => setPlayerName(e.target.value)} 
                                 required 
-                                minlength = "3"
+                                minLength = "3"
                                 className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:border-blue-400 focus:outline-none transition-colors" 
                                 placeholder="Your name"
                             />
@@ -44,7 +44,7 @@ export const GameSetup = ({
                                 value={computerName} 
                                 onChange={(e) => setComputerName(e.target.value)} 
                                 required
-                                minlength = "3" 
+                                minLength = "3" 
                                 className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:border-blue-400 focus:outline-none transition-colors" 
                                 placeholder="AI opponent"
                             />

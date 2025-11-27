@@ -6,15 +6,15 @@ import { ShipPlacement } from './ShipPlacement';
 import { GameBoard } from './GameBoard';
 import { Modal } from './Modal';
 import * as signalR from '@microsoft/signalr';
-import { SmileySadIcon, TrophyIcon } from '@phosphor-icons/react';
+import { SmileySadIcon, SwordIcon, TrophyIcon } from '@phosphor-icons/react';
 import { ReactComponent as GameLogo } from '../assets/game-logo.svg';
 
 export const MainLayout = () => {
     const [gameState, setGameState] = useState('init');
-    const [playerName, setPlayerName] = useState('');
-    const [computerName, setComputerName] = useState('');
-    const [boardWidth, setBoardWidth] = useState(10);
-    const [boardHeight, setBoardHeight] = useState(10);
+    const [playerName, setPlayerName] = useState('PLAYER');
+    const [computerName, setComputerName] = useState('COMPUTER');
+    const [boardWidth, setBoardWidth] = useState(8);
+    const [boardHeight, setBoardHeight] = useState(8);
     const [shipLengths, setShipLengths] = useState('5, 4, 3');
     const [playerBoard, setPlayerBoard] = useState([]);
     const [computerBoard, setComputerBoard] = useState([]);
@@ -32,8 +32,8 @@ export const MainLayout = () => {
 
     useEffect(() => {
         const newConnection = new signalR.HubConnectionBuilder()
-            .withUrl('http://localhost:5069/gameHub') // private network
-            // .withUrl('http://172.168.101.88:5069/gameHub') // public network
+            // .withUrl('http://localhost:5069/gameHub') // private network
+            .withUrl('http://172.168.100.25:5069/gameHub') // public network
             .withAutomaticReconnect()
             .build();
 
@@ -44,9 +44,10 @@ export const MainLayout = () => {
         if (connection) {
             connection.start()
                 .then(() => {
-                    connection.on('ReceiveMessage', (msg) => {
-                        if (msg.includes('Winner')) {
-                            const parts = msg.split('|');
+                    connection.on('ReceiveMessage', (receivedMessage) => {
+                        if (receivedMessage.includes('Winner')) {
+
+                            const messageParts = receivedMessage.split('|');
 
                             const parseData = str => {
                                 const clean = str.split(':')[1].trim();        
@@ -55,8 +56,8 @@ export const MainLayout = () => {
                                 return { name, score };
                             };
 
-                            const winnerData = parseData(parts[0]);
-                            const loserData = parseData(parts[1]);
+                            const winnerData = parseData(messageParts[0]);
+                            const loserData = parseData(messageParts[1]);
 
                             setModalContent({
                                 type: 'game-over',
@@ -67,7 +68,7 @@ export const MainLayout = () => {
                                 ),
                                 message: (
                                     <span className="mt-2 space-y-2 animate-fade">
-                                        <p className="flex items-center gap-2 text-xl">
+                                        <div className="flex items-center gap-2 text-xl">
                                             <span className="text-2xl font-bold text-gray-900">{winnerData.name}</span>
                                             <span className="font-bold text-blue-600">({winnerData.score})</span>
                                             <span className="font-semibold text-green-600">wins!</span>
@@ -76,8 +77,8 @@ export const MainLayout = () => {
                                                 weight="fill" 
                                                 className="text-yellow-400 p-1 drop-shadow-[0_0_10px_rgba(255,215,0,0.9)] animate-pulse"
                                             />
-                                        </p>
-                                        <p className="flex items-center gap-2 text-xl">
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xl">
                                             <span className="text-2xl font-bold text-red-700">{loserData.name}</span>
                                             <span className="font-bold text-red-500">({loserData.score})</span>
                                             <span className="font-semibold text-red-600">loses.</span>
@@ -86,13 +87,23 @@ export const MainLayout = () => {
                                                 weight="fill"
                                                 className="text-red-600 p-1 drop-shadow-[0_0_10px_rgba(255, 215, 0, 0.9)] animate-pulse" 
                                             />
-                                        </p>
+                                        </div>
                                     </span>
                                 )
                             });
                             setModalOpen(true);
                         } else {
-                            setMessage(msg);
+                            const messageParts = receivedMessage.split('|');
+                            const isHitLeft = messageParts[0].includes("hit")
+                            const isHitRight = messageParts[1].includes("hit")
+                            setMessage(
+                                <>
+                                     <div className="flex flex-col gap-2">
+                                        <span className={`${isHitLeft ? 'text-red-600' : 'text-blue-600'} font-bold`}>{messageParts[0]}</span>
+                                        <span className={`${isHitRight ? 'text-red-600' : 'text-blue-600'} font-bold`}>{messageParts[1]}</span>
+                                    </div>
+                                </>
+                            );
                         }
                     });
                 })
@@ -103,6 +114,11 @@ export const MainLayout = () => {
             };
         }
     }, [connection]);
+
+    useEffect(() => {
+        if (gameState === 'gameover' && connection)
+            connection.stop();
+    }, [gameState, connection])
 
     // set timer message notif
     useEffect(() => {
@@ -139,7 +155,48 @@ export const MainLayout = () => {
 
     const handleInitGame = async (e) => {
         e.preventDefault();
-        const ships = shipLengths.split(',').map(s => parseInt(s.trim()));
+        const parts = shipLengths.split(',').map(s => s.trim());
+
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+
+            // kosong antara koma
+            if (part.length === 0) {
+                setModalContent({
+                    type: 'invalid-input',
+                    title: 'Invalid Ship Input',
+                    message: `You have an empty value near comma last number "${parts[i-1].toString()}". Check for double commas like ",," or a trailing comma.`
+                });
+                setModalOpen(true);
+                return;
+            }
+
+            // bukan angka
+            if (!/^\d+$/.test(part)) {
+                const invalidChars = [...part].filter(c => !/\d/.test(c)).join(' ');
+                setModalContent({
+                    type: 'invalid-input',
+                    title: 'Invalid Ship Input',
+                    message: `The value "${part}" contains invalid characters: ${invalidChars}. Ship lengths must use digits only.`
+                });
+                setModalOpen(true);
+                return;
+            }
+
+            // nol atau negatif
+            const value = parseInt(part, 10);
+            if (value <= 0) {
+                setModalContent({
+                    type: 'invalid-input',
+                    title: 'Invalid Ship Input',
+                    message: `Ship length "${part}" must be greater than zero.`
+                });
+                setModalOpen(true);
+                return;
+            }
+        }
+
+        const ships = parts.map(Number);
         const width = parseInt(boardWidth);
         const height = parseInt(boardHeight);
         
@@ -245,7 +302,29 @@ export const MainLayout = () => {
     };
 
     const handleReady = () => {
-        if (placedShips.length === allShips.length) setGameState('playing');
+        if (placedShips.length === allShips.length) {
+            setGameState('playing');
+
+            setModalContent({
+                type: 'battle-start',
+                title: (
+                    <span className='flex justify-center'>                        
+                        Game
+                        <span className="flex justify-center gap-1">
+                            <SwordIcon size={32} weight="fill" className="text-red-500 rotate-[-20deg]" />
+                            <SwordIcon size={32} weight="fill" className="text-red-500 scale-x-[-1] rotate-[20deg]" />
+                        </span>
+                        Start!!
+                    </span>
+                ),
+                message: (
+                    <span className="flex text-center text-xl font-semibold tracking-wide">
+                        Your command begins. Strike with precision.
+                    </span>
+                )
+            });
+            setModalOpen(true);
+        }
     };
 
     const handleCellClick = async (row, col, isPlayer) => {
@@ -345,7 +424,7 @@ export const MainLayout = () => {
                 
                 {message && (
                     <div className="max-w-2xl p-4 mx-auto mb-6 text-center bg-white border-l-4 border-blue-500 rounded-lg shadow-sm">
-                        <p className="text-gray-700">{message}</p>
+                        <div className="text-gray-700">{message}</div>
                     </div>
                 )}
 

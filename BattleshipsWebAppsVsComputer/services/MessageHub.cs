@@ -1,6 +1,3 @@
 using Microsoft.AspNetCore.SignalR;
 
-public sealed class MessageHub : Hub
-{
-    
-}
+public sealed class MessageHub : Hub { }
