@@ -30,7 +30,25 @@ cd frontend/fe-battleships-react
 ```
 npm install
 ```
-    
+
+## 📂 Project Structure
+
+```
+src/
+├── assets/          # SVG images (ships, logo)
+├── components/      # React components
+│   ├── Board.jsx          # Individual grid cell component
+│   ├── DraggableShip.jsx  # Ship component with drag capabilities
+│   ├── GameBoard.jsx      # The main grid board layout
+│   ├── GameSetup.jsx      # Initial form to set player name & board size
+│   ├── MainLayout.jsx     # Main game logic & state management
+│   ├── Modal.jsx          # Popups for game results/notifications
+│   └── ShipPlacement.jsx  # Drag & Drop interface for setup phase
+├── services/
+│   └── api.js       # Axios setup for API calls
+├── App.js           # Root component
+└── index.js         # Entry point
+```
 
 ## ⚙️ Configuration
 
@@ -91,25 +109,6 @@ npm run build
 Builds the app for production to the `build` folder.
 
 It correctly bundles React in production mode and optimizes the build for the best performance.
-
-## 📂 Project Structure
-
-```
-src/
-├── assets/          # SVG images (ships, logo)
-├── components/      # React components
-│   ├── Board.jsx          # Individual grid cell component
-│   ├── DraggableShip.jsx  # Ship component with drag capabilities
-│   ├── GameBoard.jsx      # The main grid board layout
-│   ├── GameSetup.jsx      # Initial form to set player name & board size
-│   ├── MainLayout.jsx     # Main game logic & state management
-│   ├── Modal.jsx          # Popups for game results/notifications
-│   └── ShipPlacement.jsx  # Drag & Drop interface for setup phase
-├── services/
-│   └── api.js       # Axios setup for API calls
-├── App.js           # Root component
-└── index.js         # Entry point
-```
 
 ## 🎮 Key Features
 
