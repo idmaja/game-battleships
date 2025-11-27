@@ -76,20 +76,20 @@ To play the Web App version (Player vs Computer), you need to run both the Backe
 
 ### Step 1: Run the Backend
 
-1. Open your terminal and navigate to the backend folder:Bash
+1. Open your terminal and navigate to the backend folder
     
 ```
 cd BattleshipsWebAppsVsComputer
 ```
     
-2. Run the application:Bash
+2. Run the application
     
 ```
 dotnet run
 ```
-    
-*The backend typically starts at `http://localhost:5069` (configured in `launchSettings.json`).*
-    
+
+> *The backend typically starts at `http://localhost:5069` (configured in `launchSettings.json`).*
+> 
 
 ### Step 2: Configure the Frontend
 
@@ -107,19 +107,19 @@ const API_BASE_URL = 'http://localhost:5069/api/v1/battleships';
 
 ### Step 3: Run the Frontend
 
-1. Open a new terminal window and navigate to the frontend folder:Bash
+1. Open a new terminal window and navigate to the frontend folder
     
 ```
 cd frontend/fe-battleships-react
 ```
     
-2. Install dependencies (if you haven't already):Bash
+2. Install dependencies (if you haven't already)
     
 ```
 npm install
 ```
     
-3. Start the React application:Bash
+3. Start the React application
     
 ```
 npm start
@@ -133,13 +133,13 @@ npm start
 
 If you want to test the game logic via the CLI:
 
-1. Navigate to the console folder:Bash
+1. Navigate to the console folder
     
 ```
 cd BattleshipsConsole
 ```
     
-2. Run the application:Bash
+2. Run the application
     
 ```
 dotnet run
@@ -157,7 +157,7 @@ dotnet run
 
 ## 📄 License
 
-This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International Public License**. See the [LICENSE](https://www.google.com/search?q=LICENSE&authuser=3) file for details.
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International Public License**. See the [LICENSE](https://github.com/idmaja/game-battleships?tab=License-1-ov-file#readme) file for details.
 
 ---
 
