@@ -3,42 +3,57 @@ using Serilog;
 
 public class MainService : IMainService
 {
-    private List<IPlayer> _players;
-    private Dictionary<IPlayer, int> _playerScores;
-    private Dictionary<IPlayer, IBoard> _playerBoards;
-    private Dictionary<IPlayer, List<IShip>> _playerShips;
+    private readonly IGameState _state;
     private readonly Serilog.ILogger _logger;
     private readonly IMessageService _messageService;
-    private readonly Random _rand = new();
-
+    private readonly Random _rand;
 
     public event Action<string>? OnGameResult;
     
-    public MainService(IMessageService messageService)
+    public MainService(IMessageService messageService, Random rand, IGameState state)
     {
         _messageService = messageService;
+        _rand = rand;
+        _state = state;
+
         _logger = Log.ForContext<MainService>();
-        _players = new List<IPlayer>() ;
-        _playerBoards = new Dictionary<IPlayer, IBoard>();
-        _playerShips = new Dictionary<IPlayer, List<IShip>>();
-        _playerScores = new Dictionary<IPlayer, int>();
-        OnGameResult += (message) => 
-            _logger.Information($"\n{message}\n");
+
+        OnGameResult += (message) => _logger.Information($"\n{message}\n");
     }
 
-    public void InitializeGame(CreateGameRequest request)
+    public Result<object> InitializeGame(CreateGameRequest request)
     {
+        _logger.Information("Initializing game...");
+
+        if (request == null)
+        {
+            _logger.Error("Request cannot be null");
+            return Result<object>.Failed("Request cannot be null");
+        }
+
+        if (request.PlayerName == null || request.ComputerName == null)
+        {
+            _logger.Error("Player name and computer name cannot be null");
+            return Result<object>.Failed("Player name and computer name cannot be null");
+        }
+
+        if (request.ShipLengthsPlayer.Count == 0 || request.ShipLengthsComputer.Count == 0)
+        {
+            _logger.Error("Ship lengths cannot be empty");
+            return Result<object>.Failed("Ship lengths cannot be empty");
+        }
+
+        if (request.BoardWidth < 5 || request.BoardHeight < 5)
+        {
+            _logger.Error("Board width and height must be at least 5");
+            return Result<object>.Failed("Board width and height must be at least 5");
+        }
+
         var player = new Player(request.PlayerName);
         var computer = new Player(request.ComputerName);
 
         var boardPlayer = new Board(request.BoardWidth, request.BoardHeight);
         var boardComputer = new Board(request.BoardWidth, request.BoardHeight);
-
-        if (request.ShipLengthsPlayer.Count == 0 || request.ShipLengthsComputer.Count == 0)
-        {
-            _logger.Error("Ship lengths cannot be empty");
-            throw new ArgumentException("Ship lengths cannot be empty");
-        }
 
         var ships1 = request.ShipLengthsPlayer
             .Select(length => (IShip)new Ship(length, 0, false, new List<Coordinate>()))
@@ -48,32 +63,32 @@ public class MainService : IMainService
             .Select(length => (IShip)new Ship(length, 0, false, new List<Coordinate>()))
             .ToList();
 
-        _players = new List<IPlayer> { player, computer };
+        _state.Players = new List<IPlayer> { player, computer };
 
-        _playerBoards = new Dictionary<IPlayer, IBoard>
+        _state.PlayerBoard = new Dictionary<IPlayer, IBoard>
         {
             { player, boardPlayer },
             { computer, boardComputer }
         };
 
-        _playerShips = new Dictionary<IPlayer, List<IShip>>
+        _state.PlayerShips = new Dictionary<IPlayer, List<IShip>>
         {
             { player, ships1 },
             { computer, ships2 }
         };
         
-        _playerScores = new Dictionary<IPlayer, int>
+        _state.PlayerScores = new Dictionary<IPlayer, int>
         {
             { player, 0 },
             { computer, 0 }
         };
 
-        var board = _playerBoards[_players[1]];
+        var board = _state.PlayerBoard[_state.Players[1]];
         foreach (var ship in ships2)
         {
-            bool placed = false;
+            bool isPlaced = false;
 
-            while (!placed)
+            while (!isPlaced)
             {
                 bool horizontal = _rand.Next(2) == 0; // diacak kemungkinan horizontal 50% == 0 dan vertikal 50% == 1
 
@@ -89,7 +104,8 @@ public class MainService : IMainService
                     string start = $"{(char)('A' + col)}{row + 1}";
                     string end   = $"{(char)('A' + col + ship.Length - 1)}{row + 1}";
 
-                    placed = PlaceShips(computer, ship, start, end, out _);
+                    var placed = PlaceShips(computer, ship, start, end);
+                    isPlaced = placed.Success;
                 }
                 else
                 {
@@ -100,15 +116,40 @@ public class MainService : IMainService
                     string start = $"{(char)('A' + col)}{row + 1}";
                     string end   = $"{(char)('A' + col)}{row + ship.Length}";
 
-                    placed = PlaceShips(computer, ship, start, end, out _);
+                    var placed = PlaceShips(computer, ship, start, end);
+                    isPlaced = placed.Success;
                 }
             }
         }
+
+        return Result<object>.Ok("Successfully Initiate the Game");
     }
 
-    public bool PlaceShips(IPlayer player, IShip ship, string coorStart, string coorEnd, out string message)
+    public Result<object> ResetGane()
     {
-        var board = _playerBoards[player];
+        try
+        {
+            _state.Players.Clear();
+            _state.PlayerBoard.Clear();
+            _state.PlayerShips.Clear();
+            _state.PlayerScores.Clear();
+            
+            return Result<object>.Ok("Successfully reset the game");
+        }
+        catch (Exception ex)
+        {
+            return Result<object>.Failed($"Failed to reset the game {ex.Message}");
+        }
+    }
+
+    public Result<object> PlaceShips(IPlayer player, IShip ship, string coorStart, string coorEnd)
+    {
+        if (IsGameInitialized())
+        {
+            return Result<object>.Failed($"No Game Found!");
+        }
+
+        var board = _state.PlayerBoard[player];
 
         Coordinate start = CoordinateInput(coorStart);
         Coordinate end = CoordinateInput(coorEnd);
@@ -118,8 +159,7 @@ public class MainService : IMainService
             start.Col < 0 || start.Col >= board.Width ||
             end.Col < 0 || end.Col >= board.Width)
         {
-            message = $"Invalid ship placement. Ship is outside the board.";
-            return false;
+            return Result<object>.Failed($"Invalid ship placement. Ship is outside the board.");
         }
         
         bool isHorizontal = start.Row == end.Row;
@@ -127,8 +167,7 @@ public class MainService : IMainService
 
         if (!isHorizontal && !isVertical)
         {
-            message = $"Invalid ship placement. Ships must be placed horizontally or vertically.";
-            return false;
+            return Result<object>.Failed($"Invalid ship placement. Ships must be placed horizontally or vertically.");
         }
 
         int distance = isHorizontal
@@ -137,8 +176,7 @@ public class MainService : IMainService
 
         if (distance != ship.Length)
         {
-            message = $"Ship length must be {ship.Length}";
-            return false;
+            return Result<object>.Failed($"Ship length must be {ship.Length}");
         }
 
         try
@@ -149,27 +187,32 @@ public class MainService : IMainService
             {
                 if (board.Cells[coordinate.Row, coordinate.Col].Ship != null)
                 {
-                    message = $"Invalid ship placement. Ships cannot overlap or extend beyond the board.";
-                    return false;
+                    return Result<object>.Failed($"Invalid ship placement. Ships cannot overlap or extend beyond the board.");
                 }
             }
 
             foreach (var coordinate in coordinates)
+            {
                 board.Cells[coordinate.Row, coordinate.Col].Ship = (Ship?)ship;
+            }
 
             ship.Positions = coordinates;
-            message = $"Ship placed successfully for player {player.Name} at coordinates: {coorStart} to {coorEnd}";
-            return true;
+            return Result<object>.Ok($"Ship placed successfully for player {player.Name} at coordinates: {coorStart} to {coorEnd}");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            message = $"Error placing ship for player {player.Name}";
-            return false;
+            return Result<object>.Failed($"Error placing ship for player {player.Name}: {ex.Message}");
         }
     }
 
     public void RemoveShip(IPlayer player, IShip ship) {
-        var board = _playerBoards[player];
+
+        if (IsGameInitialized())
+        {
+            return Result<object>.Failed($"No Game Found!"); 
+        }
+
+        var board = _state.PlayerBoard[player];
 
         if (ship.Positions != null)
         {
@@ -244,23 +287,21 @@ public class MainService : IMainService
         }
     }
 
-    public async Task<AttackResult> Attack(Coordinate coordinate)
+    public async Task<Result<AttackResult>> Attack(Coordinate coordinate)
     {
-        var human = _players[0];
-        var computer = _players[1];
+        var human = _state.Players[0];
+        var computer = _state.Players[1];
         var scores = GetAllPlayerScore();
 
-        var cellComputer = _playerBoards[computer].Cells[coordinate.Row, coordinate.Col];
+        var cellComputer = _state.PlayerBoard[computer].Cells[coordinate.Row, coordinate.Col];
 
-        bool isShipHit = ReceivedAttack(computer, coordinate, out string message);
+        bool isShipHit = ReceivedAttack(computer, coordinate, out string _);
 
         var messageNotification = new StringBuilder();
 
         if (isShipHit)
         {
             IncreasePlayerScore(human);
-
-            // coordinate = {(char)(coordinate.Col + 'A')}{coordinate.Row + 1}
             
             if (IsAllShipsSunk(computer))
             {
@@ -270,12 +311,12 @@ public class MainService : IMainService
                     $"Winner: {human.Name} ({scores[human]}) | Looser: {computer.Name} ({scores[computer]})"
                 );
 
-                return new AttackResult
+                return Result<AttackResult>.Ok(new AttackResult
                 {
                     HumanHit = true,
                     ComputerHit = false,
                     IsGameOver = true,
-                };
+                });
             }
 
             messageNotification.Append($"Attack by {human.Name} hit the target! | ");
@@ -287,14 +328,12 @@ public class MainService : IMainService
         }
 
         var coordinateComputerShot = GetRandomShotForComputer(human);
-        bool computerHit = ReceivedAttack(human, coordinateComputerShot, out string messageComputer);
-        var cellHuman = _playerBoards[human].Cells[coordinateComputerShot.Row, coordinateComputerShot.Col];
+        bool computerHit = ReceivedAttack(human, coordinateComputerShot, out string _);
+        var cellHuman = _state.PlayerBoard[human].Cells[coordinateComputerShot.Row, coordinateComputerShot.Col];
 
         if (computerHit)
         {
             IncreasePlayerScore(computer);
-
-            // coordinate = {(char)(coordinateComputerShot.Col + 'A')}{coordinateComputerShot.Row + 1}
 
             if (IsAllShipsSunk(human))
             {
@@ -304,13 +343,13 @@ public class MainService : IMainService
                     $"Winner: {computer.Name} ({scores[computer]}) | Looser: {human.Name} ({scores[human]})"
                 );
 
-                return new AttackResult
+               return Result<AttackResult>.Ok(new AttackResult
                 {
                     HumanHit = isShipHit,
                     ComputerHit = true,
                     IsGameOver = true,
                     Coordinate = coordinateComputerShot
-                };
+                });
             }
 
             messageNotification.Append($"Attack by {computer.Name} hit the target!");
@@ -321,20 +360,21 @@ public class MainService : IMainService
             messageNotification.Append($"Attack by {computer.Name} is off target!");
         }
 
+        // send message through SignalR / WebSocket
         await MessageNotification(messageNotification.ToString());
 
-        return new AttackResult
+        return Result<AttackResult>.Ok(new AttackResult
         {
             HumanHit = isShipHit,
             ComputerHit = computerHit,
             IsGameOver = false,
             Coordinate = coordinateComputerShot
-        };
+        });
     }
 
     public Coordinate GetRandomShotForComputer(IPlayer human)
     {
-        var board = _playerBoards[human];
+        var board = _state.PlayerBoard[human];
 
         while (true)
         {
@@ -352,7 +392,7 @@ public class MainService : IMainService
 
     public bool ReceivedAttack(IPlayer defender, Coordinate coordinate, out string message)
     {
-        var boardDefender = _playerBoards[defender];
+        var boardDefender = _state.PlayerBoard[defender];
         var cell = boardDefender.Cells[coordinate.Row, coordinate.Col];
 
         if (cell.IsHit) 
@@ -382,12 +422,12 @@ public class MainService : IMainService
 
     public bool IsAllShipsSunk(IPlayer defender)
     {
-        var shipsDefender = _playerShips[defender];
+        var shipsDefender = _state.PlayerShips[defender];
 
         return shipsDefender.All(ship => ship.IsSunk);
     }
 
-    public void IncreasePlayerScore(IPlayer player) => _playerScores[player]++;
+    public void IncreasePlayerScore(IPlayer player) => _state.PlayerScores[player]++;
     public void IncreaseShipHit(ICell cell) => cell.Ship!.Hits++;
 
     public virtual void GameResult(string message) => OnGameResult?.Invoke(message); // synchronous
@@ -403,15 +443,15 @@ public class MainService : IMainService
 
     public bool IsGameInitialized()
     {
-        return _players.Count > 0 
-            && _playerBoards.Count > 0 
-            && _playerShips.Count > 0 
-            && _playerScores.Count > 0;
+        return _state.Players.Count > 0 
+            && _state.PlayerBoard.Count > 0 
+            && _state.PlayerShips.Count > 0 
+            && _state.PlayerScores.Count > 0;
     }
-    public int GetPlayerScore(IPlayer player) => _playerScores[player];
-    public Dictionary<IPlayer, int> GetAllPlayerScore() => _playerScores;
-    public IBoard GetBoardInfo(IPlayer player) => _playerBoards[player];
-    public IReadOnlyList<IPlayer> GetPlayersInfo() => _players;
-    public IReadOnlyDictionary<IPlayer, IBoard> GetPlayerBoards() => _playerBoards;
-    public IReadOnlyList<IShip> GetPlayerShips(IPlayer player) => _playerShips[player];
+    public int GetPlayerScore(IPlayer player) => _state.PlayerScores[player];
+    public Dictionary<IPlayer, int> GetAllPlayerScore() => _state.PlayerScores;
+    public IBoard GetBoardInfo(IPlayer player) => _state.PlayerBoard[player];
+    public IReadOnlyList<IPlayer> GetPlayersInfo() => _state.Players;
+    public IReadOnlyDictionary<IPlayer, IBoard> GetPlayerBoards() => _state.PlayerBoard;
+    public IReadOnlyList<IShip> GetPlayerShips(IPlayer player) => _state.PlayerShips[player];
 }

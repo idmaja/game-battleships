@@ -28,12 +28,13 @@ export const MainLayout = () => {
     const [connection, setConnection] = useState(null);
     const [dragOverCell, setDragOverCell] = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [modalContent, setModalContent] = useState({ type: '', title: '', message: '' });
 
     useEffect(() => {
         const newConnection = new signalR.HubConnectionBuilder()
-            // .withUrl('http://localhost:5069/gameHub') // private network
-            .withUrl('http://172.168.100.25:5069/gameHub') // public network
+            .withUrl('http://localhost:5069/gameHub') // private network
+            // .withUrl('http://172.168.100.25:5069/gameHub') // public network
             .withAutomaticReconnect()
             .build();
 
@@ -155,6 +156,8 @@ export const MainLayout = () => {
 
     const handleInitGame = async (e) => {
         e.preventDefault();
+        setLoading(true);
+
         const parts = shipLengths.split(',').map(s => s.trim());
 
         for (let i = 0; i < parts.length; i++) {
@@ -248,6 +251,8 @@ export const MainLayout = () => {
             });
             setModalOpen(true);
         }
+
+        setLoading(false);
     };
 
     const handleDragEnd = async (event) => {
@@ -383,6 +388,7 @@ export const MainLayout = () => {
         return (
             <>
                 <GameSetup 
+                    loading={loading}
                     playerName={playerName}
                     setPlayerName={setPlayerName}
                     computerName={computerName}
@@ -481,13 +487,22 @@ export const MainLayout = () => {
                     </div>
                 </div>
 
-                {gameState === 'gameover' && (
+                {gameState === 'gameover' ? (
                     <div className="mt-8 text-center">
                         <button 
                             onClick={() => window.location.reload()} 
                             className="px-8 py-3 text-white font-semibold bg-blue-500 rounded-lg hover:bg-blue-600 active:scale-[0.98] transition-all shadow-md hover:shadow-lg"
                         >
                             New Game
+                        </button>
+                    </div>
+                ) : (
+                    <div className="mt-8 text-center">
+                        <button 
+                            onClick={() => window.location.reload()}
+                            className="px-8 py-3 text-white font-semibold bg-blue-500 rounded-lg hover:bg-blue-600 active:scale-[0.98] transition-all shadow-md hover:shadow-lg"
+                        >
+                            Reset Game
                         </button>
                     </div>
                 )}

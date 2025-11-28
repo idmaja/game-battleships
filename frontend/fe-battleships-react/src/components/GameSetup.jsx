@@ -1,6 +1,7 @@
 import { ReactComponent as GameLogo } from '../assets/game-logo.svg';
 
-export const GameSetup = ({ 
+export const GameSetup = ({
+    loading, 
     playerName, 
     setPlayerName, 
     computerName, 
@@ -93,9 +94,11 @@ export const GameSetup = ({
 
                     <button 
                         type="submit" 
-                        className="w-full py-3 mt-6 text-white font-semibold bg-blue-500 rounded-lg hover:bg-blue-600 active:scale-[0.98] transition-all shadow-md hover:shadow-lg"
+                        className={`w-full py-3 mt-6 text-white font-semibold bg-blue-500 rounded-lg hover:bg-blue-600 active:scale-[0.98] transition-all shadow-md hover:shadow-lg`}
                     >
-                        Start Game
+                        <span className={`${loading ? 'animate-pulse' : ''}`}>
+                            {loading ? '...' : 'Start Game'}
+                        </span>
                     </button>
                 </form>
             </div>

@@ -77,8 +77,19 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddSingleton<IMainService, MainService>();
 builder.Services.AddSingleton<IMessageService, MessageService>();
+// REVISI DEPEDENCY INJECTION
+builder.Services.AddSingleton<Random>();
+builder.Services.AddSingleton<IGameState, GameState>();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var mainService = scope.ServiceProvider.GetRequiredService<IMainService>();
+    
+    mainService.OnGameResult += message =>
+        Log.ForContext<MainService>().Information("\n{Message}\n", message);
+}
 
 if (app.Environment.IsDevelopment())
 {

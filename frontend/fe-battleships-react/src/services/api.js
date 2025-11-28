@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// const API_BASE_URL = 'http://localhost:5069/api/v1/battleships'; // private network
-const API_BASE_URL = 'http://172.168.100.25:5069/api/v1/battleships'; // public network
+const API_BASE_URL = 'http://localhost:5069/api/v1/battleships'; // private network
+// const API_BASE_URL = 'http://172.168.100.25:5069/api/v1/battleships'; // public network
 
 export const initializeGame = (data) => axios.post(`${API_BASE_URL}/initialize-game`, data);
 export const getPlayers = () => axios.get(`${API_BASE_URL}/players`);

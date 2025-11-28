@@ -356,34 +356,34 @@ public class MainController : ControllerBase
                     });
                 }
 
-                bool success = _mainService.PlaceShips(players, ships, request.Start, request.End, out string message);
+                var placeShip = _mainService.PlaceShips(players, ships, request.Start, request.End);
 
-                if (!success)
+                if (!placeShip.Success)
                 {
-                    _logger?.Error(message);
+                    _logger?.Error(placeShip.Error);
                     return BadRequest(new GlobalResponse<object>
                     {
                         Success = false,
-                        Message = "Ship placement failed. Check the coordinates and length of the ship!",
+                        Message = placeShip.Error,
                         Data = null
                     });
                 }
 
-                _logger?.Information(message);
+                _logger?.Information(placeShip.Value.ToString()!);
                 return Ok(new GlobalResponse<IShip>
                 {
                     Success = true,
-                    Message = "Ship successfully placed",
+                    Message = placeShip.Value.ToString()!,
                     Data = ships
                 });
             }
             catch (Exception ex)
             {
-                _logger?.Error($"Error during placing ship. {ex.Message}");
+                _logger?.Error($"Error during placing ship: {ex.Message}");
                 return BadRequest(new GlobalResponse<object>
                 {
                     Success = false,
-                    Message = $"Error during placing ship. {ex.Message}",
+                    Message = $"Error during placing ship: {ex.Message}",
                     Data = null
                 });
             }
@@ -495,16 +495,30 @@ public class MainController : ControllerBase
             {
                 var coordinate = _mainService.CoordinateInput(request.Coordinate);
                 var result = await _mainService.Attack(coordinate);
+
+                if (!result.Success)
+                {
+                     _logger?.Error($"Error Result Attack: {result.Error}");
+                    return BadRequest(new GlobalResponse<object>
+                    {
+                        Success = false,
+                        Message = $"Error Result Attack: {result.Error}",
+                        Data = null
+                    });
+                }
+
                 var scores = _mainService.GetAllPlayerScore()
                             .ToDictionary(x => x.Key.Name, x => x.Value);
 
+                var attackResult = result.Value;
+
                 return Ok(new AttackResponse
                 {
-                    IsHit = result.HumanHit,
-                    ComputerHit = result.ComputerHit,
-                    ComputerShot = $"{(char)(result.Coordinate.Col + 'A')}{result.Coordinate.Row + 1}",
-                    IsGameOver = result.IsGameOver,
-                    Message = result.HumanHit ? "You hit the enemy ship" : "You missed",
+                    IsHit = attackResult.HumanHit,
+                    ComputerHit = attackResult.ComputerHit,
+                    ComputerShot = $"{(char)(attackResult.Coordinate.Col + 'A')}{attackResult.Coordinate.Row + 1}",
+                    IsGameOver = attackResult.IsGameOver,
+                    Message = attackResult.HumanHit ? "You hit the enemy ship" : "You missed",
                     Scores = scores
                 });
                 

@@ -1,9 +1,9 @@
 public interface IMainService
 {
-    bool PlaceShips(IPlayer player, IShip ship, string coorStart, string coorEnd, out string message);
+    Result<object> PlaceShips(IPlayer player, IShip ship, string coorStart, string coorEnd);
     List<Coordinate> PlaceShipInPath(Coordinate coorStart, Coordinate coorEnd);
     Coordinate CoordinateInput(string input);
-    Task<AttackResult> Attack(Coordinate coordinate);
+    Task<Result<AttackResult>> Attack(Coordinate coordinate);
     bool ReceivedAttack(IPlayer defender, Coordinate coordinate, out string message);
     bool IsAllShipsSunk(IPlayer defender);
     void IncreasePlayerScore(IPlayer player);
@@ -18,7 +18,8 @@ public interface IMainService
 
     // New Methods
     bool IsGameInitialized();
-    void InitializeGame(CreateGameRequest request);
+    Result<object> InitializeGame(CreateGameRequest request);
+   Result<object> ResetGane();
     Coordinate GetRandomShotForComputer(IPlayer human);
     void RemoveShip(IPlayer player, IShip ship);
 
