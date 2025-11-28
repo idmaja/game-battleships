@@ -1,70 +1,139 @@
-# Getting Started with Create React App
+# Battleships Game - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This is the frontend client for the Battleships Game, built with **React**. It provides an interactive user interface for players to place ships, attack the computer opponent, and receive real-time game updates.
 
-## Available Scripts
+## 🚀 Tech Stack
+
+- **Framework:** [React](https://react.dev/) (v19)
+- **Build Tool:** [Create React App](https://www.google.com/search?q=https://create-react-app.dev/&authuser=1)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+- **HTTP Client:** [Axios](https://axios-http.com/)
+- **Real-time Communication:** [@microsoft/signalr](https://www.npmjs.com/package/@microsoft/signalr)
+- **Drag & Drop:** [@dnd-kit/core](https://dndkit.com/)
+- **Icons:** [Phosphor Icons](https://phosphoricons.com/)
+
+## 🛠️ Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18 or higher recommended)
+- [npm](https://www.npmjs.com/)
+
+## 📦 Installation
+
+1. Navigate to the project directory
+    
+```
+cd frontend/fe-battleships-react
+```
+    
+2. Install dependencies
+    
+```
+npm install
+```
+
+## 📂 Project Structure
+
+```
+src/
+├── assets/          # SVG images (ships, logo)
+├── components/      # React components
+│   ├── Board.jsx          # Individual grid cell component
+│   ├── DraggableShip.jsx  # Ship component with drag capabilities
+│   ├── GameBoard.jsx      # The main grid board layout
+│   ├── GameSetup.jsx      # Initial form to set player name & board size
+│   ├── MainLayout.jsx     # Main game logic & state management
+│   ├── Modal.jsx          # Popups for game results/notifications
+│   └── ShipPlacement.jsx  # Drag & Drop interface for setup phase
+├── services/
+│   └── api.js       # Axios setup for API calls
+├── App.js           # Root component
+└── index.js         # Entry point
+```
+
+## ⚙️ Configuration
+
+Before running the application, ensure the frontend can communicate with the Backend API (running on `.NET`).
+
+### 1. Configure API Base URL
+
+Open `src/services/api.js` and set the `API_BASE_URL` to match your backend address.
+
+**For Local Development:**
+
+JavaScript
+
+```
+// src/services/api.js
+const API_BASE_URL = 'http://localhost:5069/api/v1/battleships';
+```
+
+### 2. Configure SignalR Connection
+
+Open `src/components/MainLayout.jsx` and update the SignalR Hub URL.
+
+**For Local Development:**
+
+JavaScript
+
+```
+// src/components/MainLayout.jsx
+const newConnection = new signalR.HubConnectionBuilder()
+    .withUrl('http://localhost:5069/gameHub')
+    .withAutomaticReconnect()
+    .build();
+```
+
+> Note: If you are running the backend on a different machine or network, replace localhost with the specific IP address (e.g., `http://192.168.1.100:5069`).
+> 
+
+## ▶️ Running the App
 
 In the project directory, you can run:
 
-### `npm start`
+```
+npm start
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Runs the app in the development mode.
 
-The page will reload when you make changes.\
+Open `http://localhost:3000` to view it in your browser.
+
+The page will reload when you make changes.
+
 You may also see any lint errors in the console.
 
-### `npm test`
+```
+npm run build
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Builds the app for production to the `build` folder.
 
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
 It correctly bundles React in production mode and optimizes the build for the best performance.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 🎮 Key Features
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. **Game Setup:** Customizable board size (e.g., 10x10) and ship configurations.
+2. **Drag & Drop:** Interactive ship placement using `dnd-kit` with rotation support (Horizontal/Vertical).
+3. **Gameplay:**
+    - Turn-based attacks against a Computer opponent.
+    - Visual indicators for "Hit", "Miss", and "Sunk".
+4. **Real-time Updates:** Game logs and results are pushed from the server via SignalR.
+5. **Responsive Design:** Fully styled with Tailwind CSS for a modern look.
 
-### `npm run eject`
+## 🤝 Contributing
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+1. Fork the repository.
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4. Push to the branch (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+---
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## 📄 License
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International Public License**. See the [LICENSE](https://github.com/idmaja/game-battleships?tab=License-1-ov-file#readme) file for details.
 
-## Learn More
+---
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+**Author:** [idmaja](https://github.com/idmaja)
