@@ -125,15 +125,6 @@ export const MainLayout = () => {
     useEffect(() => {
         if (!message) return;
 
-        // if (message.includes('Error') || message.includes('Invalid') || message.includes('Too Many')) {
-        //     setModalContent({
-        //         title: 'Error / Invalid',
-        //         message: message
-        //     });
-        //     // setMessage(null);
-        //     setModalOpen(true);
-        // }
-
         const timer = setTimeout(() => {
             setMessage(null);
         }, 3000);
@@ -323,7 +314,7 @@ export const MainLayout = () => {
                     </span>
                 ),
                 message: (
-                    <span className="flex text-center text-xl font-semibold tracking-wide">
+                    <span className="flex text-xl font-semibold tracking-wide text-center">
                         Your command begins. Strike with precision.
                     </span>
                 )

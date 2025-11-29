@@ -35,7 +35,7 @@ Log.Logger = new LoggerConfiguration()
                 message.Contains("Wildcard") || message.Contains("formatter") ||
                 message.Contains("Found protocol") || message.Contains("Completed") ||
                 message.Contains("OnConnectedAsync") || message.Contains("Sending") ||
-                message.Contains("Endpoint") || message.Contains("Registered"))
+                message.Contains("board") || message.Contains("Endpoint") || message.Contains("Registered"))
             {
                 return true;
             }
