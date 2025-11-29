@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { initializeGame, placeShip, attack, getBoard, removeShip } from '../services/api';
+import { initializeGame, placeShip, attack, getBoard, removeShip, resetGame } from '../services/api';
 import { DndContext, MouseSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { GameSetup } from './GameSetup';
 import { ShipPlacement } from './ShipPlacement';
@@ -15,7 +15,7 @@ export const MainLayout = () => {
     const [computerName, setComputerName] = useState('COMPUTER');
     const [boardWidth, setBoardWidth] = useState(8);
     const [boardHeight, setBoardHeight] = useState(8);
-    const [shipLengths, setShipLengths] = useState('5, 4, 3');
+    const [shipLengths, setShipLengths] = useState('1, 1');
     const [playerBoard, setPlayerBoard] = useState([]);
     const [computerBoard, setComputerBoard] = useState([]);
     const [shipsToPlace, setShipsToPlace] = useState([]);
@@ -147,55 +147,29 @@ export const MainLayout = () => {
 
     const handleInitGame = async (e) => {
         e.preventDefault();
-        setLoading(true);
 
-        const parts = shipLengths.split(',').map(s => s.trim());
-
-        for (let i = 0; i < parts.length; i++) {
-            const part = parts[i];
-
-            // kosong antara koma
-            if (part.length === 0) {
-                setModalContent({
-                    type: 'invalid-input',
-                    title: 'Invalid Ship Input',
-                    message: `You have an empty value near comma last number "${parts[i-1].toString()}". Check for double commas like ",," or a trailing comma.`
-                });
-                setModalOpen(true);
-                return;
-            }
-
-            // bukan angka
-            if (!/^\d+$/.test(part)) {
-                const invalidChars = [...part].filter(c => !/\d/.test(c)).join(' ');
-                setModalContent({
-                    type: 'invalid-input',
-                    title: 'Invalid Ship Input',
-                    message: `The value "${part}" contains invalid characters: ${invalidChars}. Ship lengths must use digits only.`
-                });
-                setModalOpen(true);
-                return;
-            }
-
-            // nol atau negatif
-            const value = parseInt(part, 10);
-            if (value <= 0) {
-                setModalContent({
-                    type: 'invalid-input',
-                    title: 'Invalid Ship Input',
-                    message: `Ship length "${part}" must be greater than zero.`
-                });
-                setModalOpen(true);
-                return;
-            }
+        const counts = shipLengths.split(',').map(s => parseInt(s.trim()) || 0);
+        const ships = [];
+        
+        if (counts[0] > 0) ships.push(...Array(counts[0]).fill(5));
+        if (counts[1] > 0) ships.push(...Array(counts[1]).fill(4));
+        if (counts[2] > 0) ships.push(...Array(counts[2]).fill(3));
+        
+        if (ships.length === 0) {
+            setModalContent({
+                type: 'invalid-input',
+                title: 'Invalid Ship Input',
+                message: 'You must have at least one ship.'
+            });
+            setModalOpen(true);
+            setLoading(false);
+            return;
         }
-
-        const ships = parts.map(Number);
         const width = parseInt(boardWidth);
         const height = parseInt(boardHeight);
+        const maxShipLength = 5;
         
         // validasi panjang ships
-        const maxShipLength = Math.max(...ships);
         const minDimension = Math.min(width, height);
         
         if (maxShipLength > minDimension) {
@@ -220,6 +194,8 @@ export const MainLayout = () => {
             setModalOpen(true);
             return;
         }
+
+        setLoading(true);
         
         try {
             await initializeGame({
@@ -235,16 +211,36 @@ export const MainLayout = () => {
             setGameState('setup');
             await loadBoards();
         } catch (error) {
+            const raw = error.response?.data?.message || error.response?.data?.error ||  'Unknown error';
+            const msg = String(raw)
+
             setModalContent({
                 type: 'error-init-game',
                 title: 'Error',
-                message: `Failed to Initialize Game: ${error}`
+                message: `${msg}`
             });
             setModalOpen(true);
         }
 
         setLoading(false);
     };
+
+    const handleResetGame = async (event) => {
+        try {
+            await resetGame();
+            window.location.reload()
+        } catch (error) {
+            const raw = error.response?.data?.message || error.response?.data?.error ||  'Unknown error';
+            const msg = String(raw)
+
+            setModalContent({
+                type: 'error-reset-game',
+                title: 'Error',
+                message: `${msg}`
+            });
+            setModalOpen(true);
+        }
+    }
 
     const handleDragEnd = async (event) => {
         const { over, active } = event;
@@ -349,7 +345,15 @@ export const MainLayout = () => {
             setPlayerBoard(playerRes.data.cells || []);
             setComputerBoard(computerRes.data.cells || []);
         } catch (error) {
-            console.error('Error loading boards:', error);
+            const raw = error.response?.data?.message || error.response?.data?.error ||  'Unknown error';
+            const msg = String(raw)
+
+            setModalContent({
+                type: 'error-load-boards',
+                title: 'Error',
+                message: `${msg}`
+            });
+            setModalOpen(true);
         }
     };
 
@@ -398,6 +402,7 @@ export const MainLayout = () => {
                     type={modalContent.type}
                     title={modalContent.title}
                     message={modalContent.message}
+                    resetGame={handleResetGame}
                 />
             </>
         );
@@ -481,7 +486,7 @@ export const MainLayout = () => {
                 {gameState === 'gameover' ? (
                     <div className="mt-8 text-center">
                         <button 
-                            onClick={() => window.location.reload()} 
+                            onClick={() => handleResetGame()} 
                             className="px-8 py-3 text-white font-semibold bg-blue-500 rounded-lg hover:bg-blue-600 active:scale-[0.98] transition-all shadow-md hover:shadow-lg"
                         >
                             New Game
@@ -490,7 +495,7 @@ export const MainLayout = () => {
                 ) : (
                     <div className="mt-8 text-center">
                         <button 
-                            onClick={() => window.location.reload()}
+                            onClick={() => handleResetGame()}
                             className="px-8 py-3 text-white font-semibold bg-blue-500 rounded-lg hover:bg-blue-600 active:scale-[0.98] transition-all shadow-md hover:shadow-lg"
                         >
                             Reset Game
@@ -518,6 +523,7 @@ export const MainLayout = () => {
                     type={modalContent.type}
                     title={modalContent.title}
                     message={modalContent.message}
+                    resetGame={handleResetGame}
                 />
             </>
         );
@@ -532,6 +538,7 @@ export const MainLayout = () => {
                 type={modalContent.type}
                 title={modalContent.title}
                 message={modalContent.message}
+                resetGame={handleResetGame}
             />
         </>
     );

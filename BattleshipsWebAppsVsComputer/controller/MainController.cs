@@ -77,7 +77,7 @@ public class MainController : ControllerBase
                 return BadRequest(new GlobalResponse<object>
                 {
                     Success = false,
-                    Message = $"Failed to reset the game: {resetGame.Error}",
+                    Message = $"{resetGame.Error}",
                     Data = null
                 });
             }

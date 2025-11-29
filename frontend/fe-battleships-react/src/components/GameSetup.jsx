@@ -1,4 +1,7 @@
 import { ReactComponent as GameLogo } from '../assets/game-logo.svg';
+import ship3 from '../assets/ship-3.svg';
+import ship4 from '../assets/ship-4.svg';
+import ship5 from '../assets/ship-5.svg';
 
 export const GameSetup = ({
     loading, 
@@ -80,25 +83,70 @@ export const GameSetup = ({
                     </div>
 
                     <div>
-                        <label className="block mb-2 text-sm font-semibold text-gray-700">Ship Lengths</label>
-                        <input 
-                            type="text" 
-                            value={shipLengths} 
-                            onChange={(e) => setShipLengths(e.target.value)} 
-                            required 
-                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:border-blue-400 focus:outline-none transition-colors" 
-                            placeholder="e.g., 5, 4, 3"
-                        />
-                        <p className="mt-1.5 text-xs text-gray-500">Comma-separated values</p>
+                        <label className="block mb-2 text-sm font-semibold text-gray-700">Ship Configuration</label>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div>
+                                <label className="block mb-1 text-xs text-gray-600">Size 5</label>
+                                <img src={ship5} alt="ship-5" className="object-contain w-full h-16 mb-2" />
+                                <input 
+                                    type="number" 
+                                    value={shipLengths.split(',')[0]?.trim() || 0}
+                                    onChange={(e) => {
+                                        const parts = shipLengths.split(',').map(s => s.trim());
+                                        parts[0] = e.target.value;
+                                        setShipLengths(parts.join(', '));
+                                    }}
+                                    min="0" 
+                                    max="5"
+                                    className="w-full px-3 py-2 transition-colors border-2 border-gray-200 rounded-lg focus:border-blue-400 focus:outline-none" 
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-1 text-xs text-gray-600">Size 4</label>
+                                <img src={ship4} alt="ship-4" className="object-contain w-full h-16 mb-2" />
+                                <input 
+                                    type="number" 
+                                    value={shipLengths.split(',')[1]?.trim() || 0}
+                                    onChange={(e) => {
+                                        const parts = shipLengths.split(',').map(s => s.trim());
+                                        parts[1] = e.target.value;
+                                        setShipLengths(parts.join(', '));
+                                    }}
+                                    min="0" 
+                                    max="5"
+                                    className="w-full px-3 py-2 transition-colors border-2 border-gray-200 rounded-lg focus:border-blue-400 focus:outline-none" 
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-1 text-xs text-gray-600">Size 3</label>
+                                <img src={ship3} alt="ship-3" className="object-contain w-full h-16 mb-2" />
+                                <input 
+                                    type="number" 
+                                    value={shipLengths.split(',')[2]?.trim() || 0}
+                                    onChange={(e) => {
+                                        const parts = shipLengths.split(',').map(s => s.trim());
+                                        parts[2] = e.target.value;
+                                        setShipLengths(parts.join(', '));
+                                    }}
+                                    min="0" 
+                                    max="5"
+                                    className="w-full px-3 py-2 transition-colors border-2 border-gray-200 rounded-lg focus:border-blue-400 focus:outline-none" 
+                                />
+                            </div>
+                        </div>
+                        <p className="mt-1.5 text-xs text-gray-500">Number of ships for each size</p>
                     </div>
 
                     <button 
-                        type="submit" 
-                        className={`w-full py-3 mt-6 text-white font-semibold bg-blue-500 rounded-lg hover:bg-blue-600 active:scale-[0.98] transition-all shadow-md hover:shadow-lg`}
+                        type="submit"
+                        disabled={loading}
+                        className="w-full py-2 mt-6 text-white font-semibold bg-blue-500 rounded-lg 
+                        hover:bg-blue-600 active:scale-[0.98] transition-all shadow-md hover:shadow-lg 
+                        flex items-center justify-center disabled:opacity-70"
                     >
-                        <span className={`${loading ? 'animate-pulse' : ''}`}>
-                            {loading ? '...' : 'Start Game'}
-                        </span>
+                        {loading ? (
+                            <span className="loader"></span>
+                        ) : 'Start Game'}
                     </button>
                 </form>
             </div>
