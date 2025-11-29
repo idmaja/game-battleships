@@ -1,5 +1,5 @@
-![INITIALIZE GAME](https://res.cloudinary.com/dmsvn9nzs/image/upload/v1764229599/Screenshot_2025-11-27_143751_uwe5al.png)
-![ATTACKING](https://res.cloudinary.com/dmsvn9nzs/image/upload/v1764229598/Screenshot_2025-11-27_143920_hv7w1m.png)
+![GAME SETUP](https://res.cloudinary.com/dmsvn9nzs/image/upload/v1764419694/Screenshot_2025-11-29_193331_sv2lwx.png)
+![BATTLE](https://res.cloudinary.com/dmsvn9nzs/image/upload/v1764229598/Screenshot_2025-11-27_143920_hv7w1m.png)
 
 # Battleships Game Project
 
