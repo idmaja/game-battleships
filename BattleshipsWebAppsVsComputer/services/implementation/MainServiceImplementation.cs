@@ -91,9 +91,17 @@ public class MainService : IMainService
         foreach (var ship in ships2)
         {
             bool isPlaced = false;
+            int attempts = 0;
+            int maxAttempts = 1000;
 
             while (!isPlaced)
             {
+                if (attempts++ > maxAttempts)
+                {
+                    _logger.Error("[INITIALIZE GAME] Too many attempts placing computer ships.");
+                    return Result<object>.Failed("Failed to place computer ships after many attempts.");
+                }
+
                 // random possibility : 50%
                 bool horizontal = _rand.Next(2) == 0; 
 
@@ -112,14 +120,12 @@ public class MainService : IMainService
                     var placed = PlaceShips(computer, ship, start, end);
                     if (!placed.Success)
                     {
-                        _logger.Error($"[INITIALIZE GAME] {placed.Error}");
-                        return Result<object>.Failed(placed.Error);
+                        _logger.Warning($"[INITIALIZE GAME] Retry placing ship horizontally: {placed.Error}");
+                        continue;
                     }
-                    else
-                    {
-                        _logger.Information($"[INITIALIZE GAME] {placed.Value}");
-                        isPlaced = placed.Success;
-                    }
+
+                    _logger.Information($"[INITIALIZE GAME] {placed.Value}");
+                    isPlaced = placed.Success;
                 }
                 else
                 {
@@ -133,14 +139,12 @@ public class MainService : IMainService
                     var placed = PlaceShips(computer, ship, start, end);
                     if (!placed.Success)
                     {
-                        _logger.Error($"[INITIALIZE GAME] {placed.Error}");
-                        return Result<object>.Failed(placed.Error);
+                        _logger.Warning($"[INITIALIZE GAME] Retry placing ship vertically: {placed.Error}");
+                        continue;
                     }
-                    else
-                    {
-                        _logger.Information($"[INITIALIZE GAME] {placed.Value}");
-                        isPlaced = placed.Success;
-                    }
+
+                    _logger.Information($"[INITIALIZE GAME] {placed.Value}");
+                    isPlaced = placed.Success;
                 }
             }
         }

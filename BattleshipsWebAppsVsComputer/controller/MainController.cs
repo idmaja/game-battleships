@@ -343,7 +343,7 @@ public class MainController : ControllerBase
 
             var ships = getShips.Value
                         .FirstOrDefault(ship => 
-                            ship.Length == request.ShipLength && ship.Positions != null
+                            ship.Length == request.ShipLength && (ship.Positions == null || !ship.Positions.Any())
                         );
 
             var placeShip = _mainService.PlaceShips(players!, ships!, request.Start, request.End);
