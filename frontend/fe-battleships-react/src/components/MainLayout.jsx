@@ -5,9 +5,12 @@ import { GameSetup } from './GameSetup';
 import { ShipPlacement } from './ShipPlacement';
 import { GameBoard } from './GameBoard';
 import { Modal } from './Modal';
+import { PauseMenu } from './PauseMenu';
+import { useAudio } from '../services/useAudio';
 import * as signalR from '@microsoft/signalr';
-import { SmileySadIcon, SwordIcon, TrophyIcon } from '@phosphor-icons/react';
+import { SmileySadIcon, SwordIcon, TrophyIcon, PauseIcon } from '@phosphor-icons/react';
 import { ReactComponent as GameLogo } from '../assets/game-logo.svg';
+import { AttackPopUp } from './AttackPopUp';
 
 export const MainLayout = () => {
     const [gameState, setGameState] = useState('init');
@@ -30,6 +33,22 @@ export const MainLayout = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [modalContent, setModalContent] = useState({ type: '', title: '', message: '' });
+    const [isPaused, setIsPaused] = useState(false);
+    const [playerAttackNotif, setPlayerAttackNotif] = useState(null);
+    const [computerAttackNotif, setComputerAttackNotif] = useState(null);
+    const {
+        musicVolume,
+        setMusicVolume,
+        sfxVolume,
+        setSfxVolume,
+        isMusicMuted,
+        setIsMusicMuted,
+        isSfxMuted,
+        setIsSfxMuted,
+        playBackgroundMusic,
+        stopBackgroundMusic,
+        playSfx
+    } = useAudio();
 
     useEffect(() => {
         const newConnection = new signalR.HubConnectionBuilder()
@@ -47,7 +66,8 @@ export const MainLayout = () => {
                 .then(() => {
                     connection.on('ReceiveMessage', async (receivedMessage) => {
                         if (receivedMessage.includes('Winner')) {
-
+                            stopBackgroundMusic();
+                            
                             const response = await getScores();
                             setScores(response.data || {});
 
@@ -62,6 +82,8 @@ export const MainLayout = () => {
 
                             const winnerData = parseData(messageParts[0]);
                             const loserData = parseData(messageParts[1]);
+                            
+                            winnerData.name == playerName ? playSfx('win') : playSfx('lose');
 
                             setModalContent({
                                 type: 'game-over',
@@ -100,14 +122,18 @@ export const MainLayout = () => {
                             const messageParts = receivedMessage.split('|');
                             const isHitLeft = messageParts[0].includes("hit")
                             const isHitRight = messageParts[1].includes("hit")
-                            setMessage(
-                                <>
-                                     <div className="flex flex-col gap-2">
-                                        <span className={`${isHitLeft ? 'text-red-600' : 'text-blue-600'} font-bold`}>{messageParts[0]}</span>
-                                        <span className={`${isHitRight ? 'text-red-600' : 'text-blue-600'} font-bold`}>{messageParts[1]}</span>
-                                    </div>
-                                </>
-                            );
+                            
+                            setTimeout(() => {
+                                (isHitLeft || isHitRight) ? playSfx('hit') : playSfx('miss')
+                            }, 500);
+                            
+                            setComputerAttackNotif(null);
+                            setPlayerAttackNotif(null);
+                            
+                            setTimeout(() => {
+                                setComputerAttackNotif({ message: messageParts[0], isHit: isHitLeft });
+                                setPlayerAttackNotif({ message: messageParts[1], isHit: isHitRight });
+                            }, 10);
                         }
                     });
                 })
@@ -213,6 +239,7 @@ export const MainLayout = () => {
             setAllShips(ships);
             setGameState('setup');
             await loadBoards();
+            playBackgroundMusic();
         } catch (error) {
             const raw = error.response?.data?.message || error.response?.data?.error ||  'Unknown error';
             const msg = String(raw)
@@ -230,6 +257,7 @@ export const MainLayout = () => {
 
     const handleResetGame = async (event) => {
         try {
+            stopBackgroundMusic();
             await resetGame();
             window.location.reload()
         } catch (error) {
@@ -269,6 +297,7 @@ export const MainLayout = () => {
                 end
             });
             
+            playSfx('drag-end-ship');
             const newShips = [...shipsToPlace];
             const indexToRemove = newShips.findIndex((s, i) => s === draggedShip && i === shipIndex);
             newShips.splice(indexToRemove, 1);
@@ -299,7 +328,9 @@ export const MainLayout = () => {
     const handleReady = () => {
         if (placedShips.length === allShips.length) {
             setGameState('playing');
-
+            stopBackgroundMusic();
+            playSfx('battle');
+            
             setModalContent({
                 type: 'battle-start',
                 title: (
@@ -319,13 +350,19 @@ export const MainLayout = () => {
                 )
             });
             setModalOpen(true);
+            
+            setTimeout(() => {
+                playBackgroundMusic();
+            }, 2300);
         }
     };
 
     const handleCellClick = async (row, col, isPlayer) => {
         if (gameState === 'playing' && !isPlayer) {
             const coord = `${String.fromCharCode(65 + col)}${row + 1}`;
+            
             try {
+                playSfx('attack');
                 const response = await attack({ coordinate: coord });
                 
                 setScores(response.data.scores || {});
@@ -346,11 +383,14 @@ export const MainLayout = () => {
     const loadBoards = async () => {
         if (!playerName || !computerName) return;
         try {
-            const playerRes = await getBoard({ playerName: playerName });
+            const playerRes = await getBoard({ playerName });
             const computerRes = await getBoard({ playerName: computerName });
 
             setPlayerBoard(playerRes.data.cells || []);
             setComputerBoard(computerRes.data.cells || []);
+
+            setBoardWidth(playerRes.data.width);
+            setBoardHeight(playerRes.data.height);
         } catch (error) {
             const raw = error.response?.data?.message || error.response?.data?.error ||  'Unknown error';
             const msg = String(raw)
@@ -417,13 +457,22 @@ export const MainLayout = () => {
 
     const content = (
         <div className="min-h-screen p-8 bg-gradient-to-br from-gray-50 to-gray-100">
-            <div className="mx-auto max-w-7xl">
+            <div className="mx-auto max-w-7xl relative">
                 <div className="mb-6 text-center">
-                    <div className='flex justify-center flex-auto gap-3'>
+                    <div className='flex justify-center items-center gap-3'>
                         <div className='text-3xl'>
                             <GameLogo/>
                         </div>
                     </div>
+                    {(gameState === 'playing' || gameState === 'setup' || gameState === 'gameover') && (
+                        <button
+                            onClick={() => setIsPaused(true)}
+                            className="absolute right-2 top-5 shadow-md p-3 bg-blue-400 rounded-full text-white hover:bg-blue-500 transition-all"
+                            title="Pause Game"
+                        >
+                            <PauseIcon size={24} weight="fill" />
+                        </button>
+                    )}
                     <p className="mt-2 text-sm text-gray-500">
                         {gameState === 'setup' && 'Place your ships on the board'}
                         {gameState === 'playing' && 'Attack the enemy board!'}
@@ -450,7 +499,7 @@ export const MainLayout = () => {
                 )}
 
                 <div className="flex flex-col gap-6 lg:flex-row">
-                    <div className='flex-1 order-2 lg:order-1v'>
+                    <div className='flex-1 order-2 lg:order-1v relative'>
                         <GameBoard 
                             cells={computerBoard}
                             isPlayer={false}
@@ -468,8 +517,19 @@ export const MainLayout = () => {
                                 ? false : undefined
                             }
                         />
+                        <AttackPopUp
+                            title="Your attack"
+                            notif={computerAttackNotif}
+                        />
+                        {/* {computerAttackNotif && (
+                            <div className={`absolute top-1/2 right-4 transform -translate-y-1/2 px-6 py-4 text-3xl font-bold animate-bounce-in ${
+                                playerAttackNotif.isHit ? ' text-red-500' : ' text-blue-500'
+                            }`} style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+                                {playerAttackNotif.isHit ? 'HIT!' : 'MISS!'}
+                            </div>
+                        )} */}
                     </div>
-                    <div className='flex-1 order-1 lg:order-2'>
+                    <div className='flex-1 order-1 lg:order-2 relative'>
                         <GameBoard 
                             cells={playerBoard}
                             isPlayer={true}
@@ -487,25 +547,27 @@ export const MainLayout = () => {
                                 ? false : undefined
                             }
                         />
+                        <AttackPopUp
+                            title="Enemy attack"
+                            notif={playerAttackNotif}
+                        />  
+                        {/* {playerAttackNotif && (
+                            <div className={`absolute top-1/2 right-4 transform -translate-y-1/2 px-6 py-4 text-3xl font-bold animate-bounce-in ${
+                                playerAttackNotif.isHit ? ' text-red-500' : ' text-blue-500'
+                            }`} style={{ fontFamily: 'Segoe UI, sans-serif' }}>
+                                {playerAttackNotif.isHit ? 'HIT!' : 'MISS!'}
+                            </div>
+                        )} */}
                     </div>
                 </div>
 
-                {gameState === 'gameover' ? (
+                {gameState === 'gameover' && (
                     <div className="mt-8 text-center">
                         <button 
                             onClick={() => handleResetGame()} 
                             className="px-8 py-3 text-white font-semibold bg-blue-500 rounded-lg hover:bg-blue-600 active:scale-[0.98] transition-all shadow-md hover:shadow-lg"
                         >
                             New Game
-                        </button>
-                    </div>
-                ) : (
-                    <div className="mt-8 text-center">
-                        <button 
-                            onClick={() => handleResetGame()}
-                            className="px-8 py-3 text-white font-semibold bg-red-500 rounded-lg hover:bg-red-600 active:scale-[0.98] transition-all shadow-md hover:shadow-lg"
-                        >
-                            Reset Game
                         </button>
                     </div>
                 )}
@@ -518,9 +580,10 @@ export const MainLayout = () => {
             <>
                 <DndContext 
                     sensors={sensors}
-                    onDragStart={(e) => setDraggedShip(parseInt(e.active.id.split('-')[1]))} 
+                    onDragStart={(e) => { setDraggedShip(parseInt(e.active.id.split('-')[1])); playSfx('drag-start-ship'); }} 
                     onDragOver={handleDragOver}
                     onDragEnd={(e) => { handleDragEnd(e); setDragOverCell(null); }}
+                    modifiers={[]}
                 >
                     {content}
                 </DndContext>
@@ -531,6 +594,22 @@ export const MainLayout = () => {
                     title={modalContent.title}
                     message={modalContent.message}
                     resetGame={handleResetGame}
+                />
+                <PauseMenu
+                    isOpen={isPaused}
+                    onClose={() => setIsPaused(false)}
+                    musicVolume={musicVolume}
+                    setMusicVolume={setMusicVolume}
+                    sfxVolume={sfxVolume}
+                    setSfxVolume={setSfxVolume}
+                    isMusicMuted={isMusicMuted}
+                    setIsMusicMuted={setIsMusicMuted}
+                    isSfxMuted={isSfxMuted}
+                    setIsSfxMuted={setIsSfxMuted}
+                    onResetGame={() => {
+                        setIsPaused(false);
+                        handleResetGame();
+                    }}
                 />
             </>
         );
@@ -546,6 +625,22 @@ export const MainLayout = () => {
                 title={modalContent.title}
                 message={modalContent.message}
                 resetGame={handleResetGame}
+            />
+            <PauseMenu
+                isOpen={isPaused}
+                onClose={() => setIsPaused(false)}
+                musicVolume={musicVolume}
+                setMusicVolume={setMusicVolume}
+                sfxVolume={sfxVolume}
+                setSfxVolume={setSfxVolume}
+                isMusicMuted={isMusicMuted}
+                setIsMusicMuted={setIsMusicMuted}
+                isSfxMuted={isSfxMuted}
+                setIsSfxMuted={setIsSfxMuted}
+                onResetGame={() => {
+                    setIsPaused(false);
+                    handleResetGame();
+                }}
             />
         </>
     );

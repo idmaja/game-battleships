@@ -17,6 +17,7 @@ export const DraggableShip = ({ length, index, shipOrientation }) => {
         transform: transform 
         ? `translate3d(${transform.x}px, ${transform.y}px, 0)` 
         : undefined,
+        zIndex: 9999,
     };
 
     const sprite = shipSprites[length];

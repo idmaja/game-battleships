@@ -1,4 +1,4 @@
-import { BoardCell } from './Board';
+import { BoardCell } from './BoardCell';
 import { TrophyIcon, SmileySadIcon } from '@phosphor-icons/react';
 
 export const GameBoard = ({ 
@@ -18,7 +18,13 @@ export const GameBoard = ({
     const grid = Array.from({ length: height }, () => Array(width).fill(null));
     
     cells.forEach(cell => {
-        grid[cell.row][cell.col] = cell;
+        if (!cell) return;
+
+        const { row, col } = cell;
+
+        if (row >= 0 && row < height && col >= 0 && col < width) {
+            grid[row][col] = cell;
+        }
     });
 
     return (
@@ -34,7 +40,7 @@ export const GameBoard = ({
                 </div>
                 <p className="text-sm text-gray-600">Score: <span className="font-semibold text-blue-600">{score || 0}</span></p>
             </div>
-            <div className="grid gap-1" style={{gridTemplateColumns: `repeat(${width}, minmax(0, 1fr))`, maxWidth: `${width * 36}px`}}>
+            <div className={`grid ${(width > 10 && height > 10) ? 'gap-0.5' : 'gap-1'}`} style={{gridTemplateColumns: `repeat(${width}, minmax(0, 1fr))`, maxWidth: `${width * 46}px`}}>
                 {grid.map((row, rowIdx) => 
                     row.map((cell, colIdx) => {
                         const isPreview = isPlayer && previewCells.some(p => p.row === rowIdx && p.col === colIdx);
@@ -43,7 +49,9 @@ export const GameBoard = ({
                                 key={`${rowIdx}-${colIdx}`} 
                                 row={rowIdx} 
                                 col={colIdx} 
-                                cell={cell} 
+                                cell={cell}
+                                height={height}
+                                width={width}
                                 isPlayer={isPlayer} 
                                 gameState={gameState} 
                                 handleCellClick={handleCellClick}

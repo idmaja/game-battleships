@@ -1,6 +1,6 @@
 import { useDroppable } from "@dnd-kit/core";
 
-export const BoardCell = ({ row, col, cell, isPlayer, gameState, handleCellClick, isPreview }) => {
+export const BoardCell = ({ row, col, cell, height, width, isPlayer, gameState, handleCellClick, isPreview }) => {
     
     const { setNodeRef } = useDroppable({ id: `${row}-${col}` });
 
@@ -20,7 +20,7 @@ export const BoardCell = ({ row, col, cell, isPlayer, gameState, handleCellClick
         <div
             ref={gameState === 'setup' && isPlayer ? setNodeRef : null}
             onClick={() => canClick && handleCellClick(row, col, isPlayer)}
-            className={`w-8 h-8 border rounded-sm border-gray-400 ${bgColor} ${canClick ? 'cursor-pointer hover:bg-blue-300' : ''}`}
+            className={`${(width > 10 && height > 10) ? 'w-6 h-6' : 'w-10 h-10' } border rounded-sm border-gray-400 ${bgColor} ${canClick ? 'cursor-pointer hover:bg-blue-300' : ''}`}
         />
     );
 };
