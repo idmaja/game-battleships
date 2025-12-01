@@ -503,7 +503,7 @@ export const MainLayout = () => {
                     <div className="mt-8 text-center">
                         <button 
                             onClick={() => handleResetGame()}
-                            className="px-8 py-3 text-white font-semibold bg-blue-500 rounded-lg hover:bg-blue-600 active:scale-[0.98] transition-all shadow-md hover:shadow-lg"
+                            className="px-8 py-3 text-white font-semibold bg-red-500 rounded-lg hover:bg-red-600 active:scale-[0.98] transition-all shadow-md hover:shadow-lg"
                         >
                             Reset Game
                         </button>
