@@ -364,27 +364,11 @@ public class MainService : IMainService
     {
         if (!IsGameInitialized())
         {
-            return Result<AttackResult>.Failed($"No Game Found!"); 
+            return Result<AttackResult>.Failed("No Game Found!");
         }
 
         var human = _state.Players[0];
         var computer = _state.Players[1];
-        var scores = GetPlayerScore();
-        if (!scores.Success)
-        {
-            _logger.Error($"[ATTACK] {scores.Error}");
-            return Result<AttackResult>.Failed(scores.Error);
-        }
-
-        var humanScore = scores.Value
-                        .Where(dict => dict.Key.ToString() == human.Name)
-                        .Select(dict => dict.Value)
-                        .FirstOrDefault();
-
-        var computerScore = scores.Value
-                        .Where(dict => dict.Key.ToString() == computer.Name)
-                        .Select(dict => dict.Value)
-                        .FirstOrDefault();
 
         var cellComputer = _state.PlayerBoard[computer].Cells[coordinate.Row, coordinate.Col];
 
@@ -395,21 +379,39 @@ public class MainService : IMainService
         if (isShipHit)
         {
             IncreasePlayerScore(human);
-            
+
             if (IsAllShipsSunk(computer))
             {
-                GameResult($"Winner: {human.Name} ({humanScore}) | Looser: {computer.Name} ({computerScore})");
+                var finalScores = GetPlayerScore();
+                if (!finalScores.Success)
+                {
+                    _logger.Error($"[ATTACK] {finalScores.Error}");
+                    return Result<AttackResult>.Failed(finalScores.Error);
+                }
 
-                await MessageNotification(
-                    $"Winner: {human.Name} ({humanScore}) | Looser: {computer.Name} ({computerScore})"
-                );
+                var humanScore = finalScores.Value
+                    .Where(dict => dict.Key.ToString() == human.Name)
+                    .Select(dict => dict.Value)
+                    .FirstOrDefault();
 
-                _logger.Information($"[Attack] All Computer's ships is sunk!");
+                var computerScore = finalScores.Value
+                    .Where(dict => dict.Key.ToString() == computer.Name)
+                    .Select(dict => dict.Value)
+                    .FirstOrDefault();
+
+                var resultMessage =
+                    $"Winner: {human.Name} ({humanScore}) | Looser: {computer.Name} ({computerScore})";
+
+                GameResult(resultMessage);
+
+                await MessageNotification(resultMessage);
+
+                _logger.Information("[Attack] All Computer's ships is sunk!");
                 return Result<AttackResult>.Ok(new AttackResult
                 {
                     HumanHit = true,
                     ComputerHit = false,
-                    IsGameOver = true,
+                    IsGameOver = true
                 });
             }
 
@@ -433,13 +435,31 @@ public class MainService : IMainService
 
             if (IsAllShipsSunk(human))
             {
-                GameResult($"Winner: {computer.Name} ({computerScore}) | Looser: {human.Name} ({humanScore})");
+                var finalScores = GetPlayerScore();
+                if (!finalScores.Success)
+                {
+                    _logger.Error($"[ATTACK] {finalScores.Error}");
+                    return Result<AttackResult>.Failed(finalScores.Error);
+                }
 
-                await MessageNotification(
-                    $"Winner: {computer.Name} ({computerScore}) | Looser: {human.Name} ({humanScore})"
-                );
+                var humanScore = finalScores.Value
+                    .Where(dict => dict.Key.ToString() == human.Name)
+                    .Select(dict => dict.Value)
+                    .FirstOrDefault();
 
-                _logger.Information($"[Attack] All Player's ships is sunk!");
+                var computerScore = finalScores.Value
+                    .Where(dict => dict.Key.ToString() == computer.Name)
+                    .Select(dict => dict.Value)
+                    .FirstOrDefault();
+
+                var resultMessage =
+                    $"Winner: {computer.Name} ({computerScore}) | Looser: {human.Name} ({humanScore})";
+
+                GameResult(resultMessage);
+
+                await MessageNotification(resultMessage);
+
+                _logger.Information("[Attack] All Player's ships is sunk!");
                 return Result<AttackResult>.Ok(new AttackResult
                 {
                     HumanHit = isShipHit,
@@ -459,7 +479,6 @@ public class MainService : IMainService
             messageNotification.Append($"Attack by {computer.Name} is off target!");
         }
 
-        // send message through SignalR / WebSocket
         await MessageNotification(messageNotification.ToString());
 
         _logger.Information(messageNotification.ToString());

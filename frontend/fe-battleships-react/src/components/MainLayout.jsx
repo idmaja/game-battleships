@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { initializeGame, placeShip, attack, getBoard, removeShip, resetGame } from '../services/api';
+import { initializeGame, placeShip, attack, getBoard, removeShip, resetGame, getScores } from '../services/api';
 import { DndContext, MouseSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { GameSetup } from './GameSetup';
 import { ShipPlacement } from './ShipPlacement';
@@ -45,8 +45,11 @@ export const MainLayout = () => {
         if (connection) {
             connection.start()
                 .then(() => {
-                    connection.on('ReceiveMessage', (receivedMessage) => {
+                    connection.on('ReceiveMessage', async (receivedMessage) => {
                         if (receivedMessage.includes('Winner')) {
+
+                            const response = await getScores();
+                            setScores(response.data || {});
 
                             const messageParts = receivedMessage.split('|');
 
@@ -327,7 +330,11 @@ export const MainLayout = () => {
                 
                 setScores(response.data.scores || {});
                 
-                if (response.data.isGameOver) setGameState('gameover');
+                if (response.data.isGameOver){
+                    const responseScores = await getScores();
+                    setGameState('gameover');
+                    setScores(responseScores.data?.data || {});
+                }
                 
                 await loadBoards();
             } catch (error) {
