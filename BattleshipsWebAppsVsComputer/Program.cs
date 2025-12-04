@@ -43,7 +43,7 @@ Log.Logger = new LoggerConfiguration()
             // Error, Warning, or self-log included
             return false; 
         })
-        .WriteTo.File("logs/mainservice-.log", rollingInterval: RollingInterval.Day)
+        .WriteTo.File("Logs/mainservice-.log", rollingInterval: RollingInterval.Day)
     )
     .CreateLogger();
 
