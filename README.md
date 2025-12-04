@@ -78,13 +78,13 @@ To play the Web App version (Player vs Computer), you need to run both the Backe
 
 1. Open your terminal and navigate to the backend folder
     
-```
+```bash
 cd BattleshipsWebAppsVsComputer
 ```
     
 2. Run the application
     
-```
+```bash
 dotnet run
 ```
 
@@ -98,8 +98,8 @@ Before running the frontend, ensure the API URL matches your local backend addre
 1. Open `frontend/fe-battleships-react/src/services/api.js`.
 2. Check the `API_BASE_URL` variable. If running locally, ensure it points to localhost:JavaScript
     
-```
-const API_BASE_URL = 'http://localhost:5069/api/v1/battleships';
+```javascript
+const API_BASE_URL = "http://localhost:5069/api/v1/battleships";
 ```
     
 3. Do the same for the SignalR connection in `MainLayout.jsx`: `.withUrl('http://localhost:5069/gameHub')`
@@ -109,19 +109,19 @@ const API_BASE_URL = 'http://localhost:5069/api/v1/battleships';
 
 1. Open a new terminal window and navigate to the frontend folder
     
-```
+```bash
 cd frontend/fe-battleships-react
 ```
     
 2. Install dependencies (if you haven't already)
     
-```
+```bash
 npm install
 ```
     
 3. Start the React application
     
-```
+```bash
 npm start
 ```
     
@@ -135,13 +135,13 @@ If you want to test the game logic via the CLI:
 
 1. Navigate to the console folder
     
-```
+```bash
 cd BattleshipsConsole
 ```
     
 2. Run the application
     
-```
+```bash
 dotnet run
 ```
     
