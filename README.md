@@ -5,11 +5,11 @@
 
 This repository contains an implementation of the classic **Battleships** game, built using .NET (C#) and React. It features multiple versions of the game, ranging from a CLI-based Console version to a fully interactive Web App (Player vs Computer).
 
-## 📂 Project Structure
+## Project Structure
 
 The repository is organized into four main folders, each serving a specific purpose:
 
-### 1. `BattleshipsWebAppsVsComputer` (✅ Main Backend)
+### 1. `BattleshipsWebAppsVsComputer` ( Main Backend)
 
 This is the **completed (final version)** backend API for the Web App game mode.
 
@@ -17,7 +17,7 @@ This is the **completed (final version)** backend API for the Web App game mode.
 - **Tech Stack:** ASP.NET Core Web API (.NET 8), SignalR (for real-time notifications), Serilog (for logging).
 - **Functionality:** Handles game logic, the computer's attack algorithm, and data communication with the frontend.
 
-### 2. `frontend/fe-battleships-react` (✅ Main Frontend)
+### 2. `frontend/fe-battleships-react` ( Main Frontend)
 
 The user interface (UI) built with React.
 
@@ -28,14 +28,14 @@ The user interface (UI) built with React.
     - Real-time notifications using the **SignalR Client**.
     - Responsive design styled with **Tailwind CSS**.
 
-### 3. `BattleshipsConsole` (🖥️ Console Version)
+### 3. `BattleshipsConsole` ( Console Version)
 
 A pure logic implementation of Battleships that runs in a terminal/command prompt.
 
 - **Status:** Functional.
 - **Functionality:** Ideal for testing the core game logic without a web interface.
 
-### 4. `BattleshipsWebApps` (🚧 Planned)
+### 4. `BattleshipsWebApps` ( Planned)
 
 This project is **planned** for a 2-Player (PvP) online mode.
 
@@ -44,7 +44,7 @@ This project is **planned** for a 2-Player (PvP) online mode.
 
 ---
 
-## 🛠️ Technologies Used
+## Technologies Used
 
 **Backend (.NET):**
 
@@ -65,7 +65,7 @@ This project is **planned** for a 2-Player (PvP) online mode.
 
 ---
 
-## 🚀 How to Run the Project (Web Version)
+##  How to Run the Project (Web Version)
 
 To play the Web App version (Player vs Computer), you need to run both the Backend and the Frontend simultaneously.
 
@@ -129,7 +129,7 @@ npm start
 
 ---
 
-## 🎮 How to Run the Console Version
+##  How to Run the Console Version
 
 If you want to test the game logic via the CLI:
 
@@ -148,14 +148,14 @@ dotnet run
 
 ---
 
-## 📝 Additional Notes
+## Additional Notes
 
 - **BattleshipsWebAppsVsComputer** includes a Swagger UI, accessible to explore the available API endpoints.
 - The computer algorithm in the PvE version performs random shots but includes logic to search surrounding areas upon achieving a successful *hit*.
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International Public License**. See the [LICENSE](https://github.com/idmaja/game-battleships?tab=License-1-ov-file#readme) file for details.
 
